@@ -1,0 +1,13 @@
+{
+  "name": "ppl-fitness-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Offline-first PWA for a 6-day Push/Pull/Legs program. No dependencies, no build step.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "coverage": "node --test --experimental-test-coverage",
+    "serve": "node tools/serve.mjs",
+    "icons": "node tools/make-icons.mjs"
+  }
+}

@@ -1,0 +1,201 @@
+// Workout tab: session picker, today's exercises, set logging with a last-time
+// reference line. All calculations come from src/core; this file only renders.
+
+import { SESSIONS, TRAINING_KEYS, formatPrescription, getSession } from '../core/program.js';
+import { formatHuman, formatRelative } from '../core/dates.js';
+import { formatSet, formatSets, lastPerformance, setsFor } from '../core/sets.js';
+import { card, clear, el, numberValue } from './dom.js';
+
+function sessionPicker(ctx) {
+  const { ui, actions } = ctx;
+  const options = [...TRAINING_KEYS, 'rest'].map((key) => {
+    const session = SESSIONS[key];
+    const label = session.focus ? `${session.name} — ${session.focus}` : session.name;
+    const suffix = key === ui.todayDayKey ? ' (today)' : '';
+    return el('option', { value: key }, `${label}${suffix}`);
+  });
+
+  const select = el(
+    'select',
+    {
+      id: 'session-select',
+      // Chrome restores form state across reloads; without this the picker can
+      // drift away from ui.dayKey after a refresh.
+      autocomplete: 'off',
+      onchange: (event) => actions.setDayKey(event.target.value)
+    },
+    options
+  );
+  // Set after insertion so the selection is the rendered state, not a hint.
+  select.value = ui.dayKey;
+
+  return el('div', { class: 'picker' }, [el('label', { for: 'session-select' }, 'Session'), select]);
+}
+
+function restCard(ctx) {
+  const isToday = ctx.ui.dayKey === ctx.ui.todayDayKey;
+  return card('rest-card', [
+    el('h2', {}, 'Rest day'),
+    el(
+      'p',
+      {},
+      isToday
+        ? 'Nothing scheduled. Pick a session above to log a make-up workout.'
+        : 'No exercises in this session.'
+    )
+  ]);
+}
+
+function lastLine(exercise, ctx) {
+  const { state, ui } = ctx;
+  const last = lastPerformance(state, exercise.id, { dateKey: ui.dateKey, dayKey: ui.dayKey });
+  if (!last) {
+    return el('p', { class: 'last empty' }, 'No history yet — this is the baseline.');
+  }
+  const when = formatRelative(last.dateKey, ui.dateKey);
+  const where = getSession(last.dayKey).name;
+  return el('p', { class: 'last' }, [
+    `Last time (${when}, ${where}): `,
+    el('strong', {}, formatSets(last.sets, exercise.bodyweightOnly))
+  ]);
+}
+
+function loggedSets(exercise, ctx) {
+  const { state, ui, actions } = ctx;
+  const sets = setsFor(state, ui.dateKey, ui.dayKey, exercise.id);
+  if (sets.length === 0) return null;
+
+  return el(
+    'ul',
+    { class: 'set-list' },
+    sets.map((set, index) =>
+      el('li', { class: 'set-row' }, [
+        el('span', { class: 'set-index' }, index + 1),
+        el('span', { class: 'set-value' }, formatSet(set, exercise.bodyweightOnly)),
+        el(
+          'button',
+          {
+            type: 'button',
+            class: 'icon',
+            'aria-label': `Delete set ${index + 1} of ${exercise.name}`,
+            onclick: () => actions.removeSet(exercise.id, index)
+          },
+          '×'
+        )
+      ])
+    )
+  );
+}
+
+// Prefill from today's last set if there is one, otherwise from the last session —
+// the common case is repeating or nudging the previous numbers.
+function prefillFor(exercise, ctx) {
+  const { state, ui } = ctx;
+  const today = setsFor(state, ui.dateKey, ui.dayKey, exercise.id);
+  if (today.length > 0) return today[today.length - 1];
+  const last = lastPerformance(state, exercise.id, { dateKey: ui.dateKey, dayKey: ui.dayKey });
+  if (last) return last.sets[last.sets.length - 1];
+  return { weightKg: null, reps: null };
+}
+
+function addRow(exercise, ctx) {
+  const prefill = prefillFor(exercise, ctx);
+  const shown = (value) => (value === null || value === undefined ? '' : String(value));
+
+  const repsInput = el('input', {
+    type: 'number',
+    id: `reps-${exercise.id}`,
+    inputmode: 'numeric',
+    min: '0',
+    step: '1',
+    placeholder: String(exercise.repRange.min),
+    value: shown(prefill.reps)
+  });
+
+  const weightInput = exercise.bodyweightOnly
+    ? null
+    : el('input', {
+        type: 'number',
+        id: `weight-${exercise.id}`,
+        inputmode: 'decimal',
+        min: '0',
+        step: '0.5',
+        placeholder: 'kg',
+        value: shown(prefill.weightKg)
+      });
+
+  const submit = () => {
+    const reps = numberValue(repsInput);
+    if (reps === null || reps <= 0) {
+      repsInput.focus();
+      ctx.actions.toast('Enter reps first.');
+      return;
+    }
+    ctx.actions.addSet(exercise.id, {
+      weightKg: weightInput ? numberValue(weightInput) : null,
+      reps
+    });
+  };
+
+  const onEnter = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      submit();
+    }
+  };
+
+  repsInput.addEventListener('keydown', onEnter);
+  if (weightInput) weightInput.addEventListener('keydown', onEnter);
+
+  return el('div', { class: 'add-row' }, [
+    weightInput
+      ? el('div', { class: 'field' }, [el('label', { for: weightInput.id }, 'Weight'), weightInput])
+      : null,
+    el('div', { class: 'field' }, [el('label', { for: repsInput.id }, 'Reps'), repsInput]),
+    el('button', { type: 'button', class: 'primary add-set', onclick: submit }, 'Add set')
+  ]);
+}
+
+function exerciseCard(exercise, ctx) {
+  const logged = setsFor(ctx.state, ctx.ui.dateKey, ctx.ui.dayKey, exercise.id).length;
+  const meta = [formatPrescription(exercise), logged > 0 ? `${logged} logged` : null]
+    .filter(Boolean)
+    .join(' · ');
+
+  return card(null, [
+    el('div', { class: 'card-head' }, [
+      el('h2', {}, exercise.name),
+      exercise.anchor ? el('span', { class: 'badge' }, 'anchor') : null
+    ]),
+    el('p', { class: 'meta' }, [
+      meta,
+      exercise.note ? el('span', { class: 'note' }, ` · ${exercise.note}`) : null
+    ]),
+    lastLine(exercise, ctx),
+    loggedSets(exercise, ctx),
+    addRow(exercise, ctx)
+  ]);
+}
+
+export function renderWorkout(root, ctx) {
+  clear(root);
+  root.append(sessionPicker(ctx));
+
+  const session = getSession(ctx.ui.dayKey);
+  if (session.exercises.length === 0) {
+    root.append(restCard(ctx));
+    return;
+  }
+
+  for (const exercise of session.exercises) {
+    root.append(exerciseCard(exercise, ctx));
+  }
+}
+
+export function workoutTitle(ctx) {
+  return getSession(ctx.ui.dayKey).name;
+}
+
+export function workoutSubtitle(ctx) {
+  return formatHuman(ctx.ui.dateKey);
+}
