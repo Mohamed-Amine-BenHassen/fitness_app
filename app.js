@@ -108,7 +108,11 @@ const actions = {
   }
 };
 
-function render() {
+// Re-rendering replaces the whole view, which collapses the page height and drops
+// the scroll position to 0. Logging a set halfway down a session must not throw you
+// back to the top, so restore the offset unless the caller asked for a reset.
+function render({ resetScroll = false } = {}) {
+  const scrollY = window.scrollY;
   const ctx = { state, ui, actions, storageBytes };
 
   titleEl.textContent = ui.tab === 'workout' ? getSession(ui.dayKey).name : TITLES[ui.tab];
@@ -122,6 +126,8 @@ function render() {
   if (ui.tab === 'workout') renderWorkout(view, ctx);
   else if (ui.tab === 'protein') renderProtein(view, ctx);
   else renderBackup(view, ctx);
+
+  window.scrollTo(0, resetScroll ? 0 : scrollY);
 }
 
 for (const tab of tabs) {
@@ -129,8 +135,7 @@ for (const tab of tabs) {
     if (ui.tab === tab.dataset.tab) return;
     ui.tab = tab.dataset.tab;
     ui.editingQuickAdds = false;
-    window.scrollTo(0, 0);
-    render();
+    render({ resetScroll: true });
   });
 }
 
