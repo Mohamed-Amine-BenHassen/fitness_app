@@ -49,4 +49,3 @@ tests/                              node --test
 tools/                              dev server and icon generator
 ```
 
-See [`CLAUDE.md`](CLAUDE.md) for the rules that keep it this way.
