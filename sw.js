@@ -1,7 +1,7 @@
 // Cache-first app shell. Bump CACHE_NAME on EVERY change to a precached file,
 // or the installed app keeps serving the old bundle.
 
-const CACHE_NAME = 'ppl-v3';
+const CACHE_NAME = 'ppl-v4';
 
 const ASSETS = [
   './',
@@ -15,11 +15,13 @@ const ASSETS = [
   './src/core/sets.js',
   './src/core/nutrition.js',
   './src/core/backup.js',
+  './src/core/techniques.js',
   './src/data/store.js',
   './src/ui/dom.js',
   './src/ui/workout.js',
   './src/ui/protein.js',
   './src/ui/backup-ui.js',
+  './src/ui/technique.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png'

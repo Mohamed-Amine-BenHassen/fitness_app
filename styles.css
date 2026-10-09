@@ -95,6 +95,63 @@ body {
 .last strong { color: var(--text); font-weight: 600; }
 .last.empty { font-style: italic; }
 
+/* Exercise name opens the technique dialog; looks like a heading, dotted to hint it's tappable. */
+button.name-link {
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline dotted var(--muted);
+  text-underline-offset: 4px;
+}
+
+/* ---------- technique dialog ---------- */
+
+.tech-dialog {
+  width: 100%;
+  max-width: 560px;
+  max-height: 88vh;
+  margin: auto auto 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--surface);
+  color: var(--text);
+}
+.tech-dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+
+.tech-head {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 12px 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.tech-head h2 { margin: 0; font-size: 1.1rem; }
+
+.tech-body { padding: 4px 16px calc(20px + env(safe-area-inset-bottom)); }
+.tech-muscles { margin: 10px 0 0; color: var(--accent); font-size: 0.85rem; }
+.tech-section h3 {
+  margin: 16px 0 6px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.tech-section ul, .tech-section ol { margin: 0; padding-left: 20px; }
+.tech-section li + li { margin-top: 4px; }
+.tech-variant { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.tech-variant + .tech-variant { margin-top: 8px; }
+.tech-variant p { margin: 4px 0 0; font-size: 0.92rem; }
+.tech-video { display: inline-block; margin-top: 18px; color: var(--accent); }
+
 /* ---------- logged sets ---------- */
 
 .set-list { list-style: none; margin: 12px 0 0; padding: 0; }

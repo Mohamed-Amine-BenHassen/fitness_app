@@ -6,6 +6,7 @@ import { formatHuman, formatRelative } from '../core/dates.js';
 import { formatSet, formatSets, lastPerformance, setsFor } from '../core/sets.js';
 import { sessionId } from '../core/schema.js';
 import { card, clear, el, numberValue } from './dom.js';
+import { openTechnique } from './technique.js';
 
 function sessionPicker(ctx) {
   const { ui, actions } = ctx;
@@ -173,7 +174,18 @@ function exerciseCard(exercise, ctx) {
 
   return card(null, [
     el('div', { class: 'card-head' }, [
-      el('h2', {}, exercise.name),
+      el('h2', {}, [
+        el(
+          'button',
+          {
+            type: 'button',
+            class: 'name-link',
+            'aria-haspopup': 'dialog',
+            onclick: () => openTechnique(exercise)
+          },
+          exercise.name
+        )
+      ]),
       exercise.anchor ? el('span', { class: 'badge' }, 'anchor') : null
     ]),
     el('p', { class: 'meta' }, [
