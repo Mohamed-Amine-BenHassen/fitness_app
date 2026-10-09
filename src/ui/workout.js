@@ -5,6 +5,7 @@ import { formatPrescription, formatRest } from '../core/program.js';
 import { activePlan, liveSessions, resolveSession, sessionName } from '../core/plans.js';
 import { formatRelative } from '../core/dates.js';
 import { formatSet, formatSets, lastPerformance, setsFor } from '../core/sets.js';
+import { RECORD_LABELS, compareSets, recordsInSession } from '../core/records.js';
 import { sessionId } from '../core/schema.js';
 import { card, clear, el, numberValue } from './dom.js';
 import { openTechnique } from './technique.js';
@@ -65,18 +66,32 @@ function lastLine(exercise, ctx) {
   ]);
 }
 
+const TREND = { up: ['▲', 'better than last time'], same: ['=', 'same as last time'], down: ['▼', 'below last time'] };
+
 function loggedSets(exercise, ctx) {
   const { state, ui, actions } = ctx;
   const sets = setsFor(state, ui.dateKey, ui.dayKey, exercise.id);
   if (sets.length === 0) return null;
 
+  const current = { dateKey: ui.dateKey, dayKey: ui.dayKey };
+  const records = recordsInSession(state, exercise.id, current, sets);
+  const previous = lastPerformance(state, exercise.id, current)?.sets || [];
+
   return el(
     'ul',
     { class: 'set-list' },
-    sets.map((set, index) =>
-      el('li', { class: 'set-row' }, [
+    sets.map((set, index) => {
+      const trend = compareSets(set, previous[index]);
+      const record = records[index];
+      return el('li', { class: 'set-row' }, [
         el('span', { class: 'set-index' }, index + 1),
-        el('span', { class: 'set-value' }, formatSet(set, exercise.bodyweightOnly)),
+        el('span', { class: 'set-value' }, [
+          formatSet(set, exercise.bodyweightOnly),
+          trend
+            ? el('span', { class: `trend ${trend}`, title: TREND[trend][1], 'aria-label': TREND[trend][1] }, ` ${TREND[trend][0]}`)
+            : null
+        ]),
+        record ? el('span', { class: 'pr', title: RECORD_LABELS[record] }, `🏆 ${RECORD_LABELS[record]}`) : null,
         el(
           'button',
           {
@@ -87,8 +102,8 @@ function loggedSets(exercise, ctx) {
           },
           '×'
         )
-      ])
-    )
+      ]);
+    })
   );
 }
 

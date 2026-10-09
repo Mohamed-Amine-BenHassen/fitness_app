@@ -6,7 +6,8 @@ import { adjustTimer, isStale, startTimer } from './src/core/timer.js';
 import { REST_DAY_KEY } from './src/core/program.js';
 import { activePlan, resolveSession, scheduledKey } from './src/core/plans.js';
 import { formatHuman, localDateKey, weekdayOf } from './src/core/dates.js';
-import { addSet, removeSet } from './src/core/sets.js';
+import { addSet, removeSet, setsFor } from './src/core/sets.js';
+import { RECORD_LABELS, recordsInSession } from './src/core/records.js';
 import {
   addEntry,
   dayTotal,
@@ -117,6 +118,10 @@ const actions = {
 
   addSet(exerciseId, set) {
     commit(addSet(state, ui.dateKey, ui.dayKey, exerciseId, set));
+    const sets = setsFor(state, ui.dateKey, ui.dayKey, exerciseId);
+    const current = { dateKey: ui.dateKey, dayKey: ui.dayKey };
+    const record = recordsInSession(state, exerciseId, current, sets).at(-1);
+    if (record) toast(`🏆 New PR — ${RECORD_LABELS[record].toLowerCase()}`);
   },
 
   removeSet(exerciseId, index) {

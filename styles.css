@@ -180,6 +180,20 @@ button.name-link {
 
 .set-value { flex: 1; font-variant-numeric: tabular-nums; }
 
+.trend { font-size: 0.78rem; }
+.trend.up { color: var(--good); }
+.trend.same { color: var(--muted); }
+.trend.down { color: var(--danger); }
+.pr {
+  flex: none;
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: var(--accent);
+  background: rgba(255, 176, 32, 0.12);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
 /* ---------- forms ---------- */
 
 .add-row {
