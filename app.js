@@ -1,7 +1,8 @@
 // Wiring only: owns the state object, hands it to the renderers, saves on change.
 // No domain logic lives here — it belongs in src/core so node --test can reach it.
 
-import { load, save, storageBytes } from './src/data/store.js';
+import { load, loadTimer, save, saveTimer, storageBytes } from './src/data/store.js';
+import { adjustTimer, isStale, startTimer } from './src/core/timer.js';
 import { dayKeyForWeekday, getSession } from './src/core/program.js';
 import { formatHuman, localDateKey, weekdayOf } from './src/core/dates.js';
 import { addSet, removeSet } from './src/core/sets.js';
@@ -15,6 +16,7 @@ import {
 import { renderWorkout } from './src/ui/workout.js';
 import { renderProtein } from './src/ui/protein.js';
 import { renderBackup } from './src/ui/backup-ui.js';
+import { createTimerBar, unlockAudio } from './src/ui/timer-bar.js';
 
 const view = document.getElementById('view');
 const titleEl = document.getElementById('app-title');
@@ -63,8 +65,33 @@ function commit(next, { rerender = true } = {}) {
   if (rerender) render();
 }
 
+// The rest timer is outside `state`: it is per-device, never backed up, and
+// updating it must not re-render the view.
+let restTimer = loadTimer();
+
+const timerBar = createTimerBar(document.getElementById('timer-bar'), {
+  onAdjust: (deltaSec) => setRestTimer(adjustTimer(restTimer, deltaSec, Date.now())),
+  onSkip: () => setRestTimer(null),
+  // The bar finished on its own and is showing "Rest over"; just forget it.
+  onDone: () => {
+    restTimer = null;
+    saveTimer(null);
+  }
+});
+
+function setRestTimer(next) {
+  restTimer = next;
+  saveTimer(restTimer);
+  timerBar.show(restTimer);
+}
+
 const actions = {
   toast,
+
+  startRest(exercise) {
+    unlockAudio();
+    setRestTimer(startTimer(exercise.restSec, Date.now(), exercise.name));
+  },
 
   setDayKey(dayKey) {
     ui.dayKey = dayKey;
@@ -149,6 +176,11 @@ document.addEventListener('visibilitychange', () => {
 
 syncToday();
 render();
+
+// A rest that ended while the app was closed: alert if it was recent,
+// otherwise drop it quietly.
+if (restTimer && isStale(restTimer, Date.now())) setRestTimer(null);
+else timerBar.show(restTimer);
 
 if ('serviceWorker' in navigator) {
   // A worker was already in charge, so a change of controller means a new version

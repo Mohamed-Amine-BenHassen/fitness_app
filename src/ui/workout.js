@@ -1,7 +1,7 @@
 // Workout tab: session picker, today's exercises, set logging with a last-time
 // reference line. All calculations come from src/core; this file only renders.
 
-import { SESSIONS, TRAINING_KEYS, formatPrescription, getSession } from '../core/program.js';
+import { SESSIONS, TRAINING_KEYS, formatPrescription, formatRest, getSession } from '../core/program.js';
 import { formatHuman, formatRelative } from '../core/dates.js';
 import { formatSet, formatSets, lastPerformance, setsFor } from '../core/sets.js';
 import { sessionId } from '../core/schema.js';
@@ -194,7 +194,12 @@ function exerciseCard(exercise, ctx) {
     ]),
     lastLine(exercise, ctx),
     loggedSets(exercise, ctx),
-    addRow(exercise, ctx)
+    addRow(exercise, ctx),
+    el(
+      'button',
+      { type: 'button', class: 'ghost wide rest-start', onclick: () => ctx.actions.startRest(exercise) },
+      `Start rest · ${formatRest(exercise.restSec)}`
+    )
   ]);
 }
 

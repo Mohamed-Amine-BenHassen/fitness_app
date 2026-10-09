@@ -13,14 +13,19 @@ screen and keeps everything in the browser's local storage.
   did that exercise shown above the inputs. The inputs prefill from your last set.
 - **Protein counter** — a daily total against 190 g, with quick-add buttons you
   edit in the app (label and grams) plus free-text entries.
+- **Technique notes** — tap an exercise name for setup, steps, cues and common
+  mistakes. Works offline.
+- **Rest timer** — *Start rest* on any exercise counts down its rest time, with
+  ±15 s and Skip. It vibrates and beeps at zero and keeps the screen on while it
+  runs. If the screen locks anyway, the alert fires when you come back.
 - **Backup** — export everything to a JSON file, restore it on any device.
 
-Out of scope by design: charts, rest timers, accounts, sync, notifications.
+Out of scope by design: charts, accounts, sync, notifications.
 
 ## Running it locally
 
 ```bash
-node --test              # 56 tests, no dependencies
+node --test              # no dependencies
 node tools/serve.mjs     # http://localhost:8080
 ```
 

@@ -337,6 +337,40 @@ button.add-set { flex: none; align-self: flex-end; }
 }
 .tab[aria-current="page"] { color: var(--accent); font-weight: 650; box-shadow: inset 0 2px 0 var(--accent); }
 
+/* ---------- rest timer ---------- */
+
+button.rest-start { margin-top: 8px; color: var(--muted); }
+
+.timer-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(56px + env(safe-area-inset-bottom));
+  z-index: 11;
+  background: var(--surface-2);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
+}
+.timer-bar[hidden] { display: none; }
+
+.timer-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 16px; }
+.timer-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.timer-label { color: var(--muted); font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.timer-clock { font-size: 1.6rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.timer-controls { display: flex; gap: 6px; }
+.timer-controls[hidden] { display: none; }
+.timer-controls button { padding: 8px 10px; font-variant-numeric: tabular-nums; }
+
+.timer-progress { height: 3px; background: var(--line); }
+.timer-progress > div { height: 100%; background: var(--accent); transition: width 250ms linear; }
+
+.timer-bar.done { background: #173a28; }
+.timer-bar.done .timer-clock { color: var(--good); }
+
+/* Make room for the bar so it never covers the last card or the toast. */
+body.has-timer { padding-bottom: calc(140px + env(safe-area-inset-bottom)); }
+body.has-timer .toast { bottom: calc(150px + env(safe-area-inset-bottom)); }
+
 /* ---------- toast ---------- */
 
 .toast {

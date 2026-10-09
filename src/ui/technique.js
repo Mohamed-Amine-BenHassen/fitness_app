@@ -39,23 +39,28 @@ function body(exercise, technique) {
 }
 
 export function openTechnique(exercise) {
+  // Remove directly rather than only in the 'close' event, which Chromium does
+  // not always deliver promptly — closed dialogs would otherwise pile up.
+  const dismiss = () => {
+    if (dialog.open) dialog.close();
+    dialog.remove();
+  };
+
   const dialog = el('dialog', { class: 'tech-dialog', 'aria-labelledby': 'tech-title' }, [
     el('div', { class: 'tech-head' }, [
       el('h2', { id: 'tech-title' }, exercise.name),
-      el(
-        'button',
-        { type: 'button', class: 'icon', 'aria-label': 'Close', onclick: () => dialog.close() },
-        '×'
-      )
+      el('button', { type: 'button', class: 'icon', 'aria-label': 'Close', onclick: dismiss }, '×')
     ]),
     el('div', { class: 'tech-body' }, body(exercise, techniqueFor(exercise.id)))
   ]);
 
   // Tapping the dimmed backdrop closes it; the click target is the dialog itself.
   dialog.addEventListener('click', (event) => {
-    if (event.target === dialog) dialog.close();
+    if (event.target === dialog) dismiss();
   });
+  // Escape and the Android back gesture close the dialog natively.
   dialog.addEventListener('close', () => dialog.remove());
+  for (const stale of document.querySelectorAll('dialog.tech-dialog')) stale.remove();
 
   document.body.append(dialog);
   dialog.showModal();
