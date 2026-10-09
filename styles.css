@@ -360,9 +360,18 @@ textarea { resize: vertical; line-height: 1.4; }
 .check input { width: 20px; height: 20px; accent-color: var(--accent); }
 .card-head .check { min-height: 0; flex: none; }
 
-.schedule { display: grid; gap: 6px; }
-.schedule-row { display: grid; grid-template-columns: 48px 1fr; align-items: center; gap: 10px; }
-.schedule-row label { color: var(--muted); font-size: 0.85rem; }
+.day-block { padding: 10px 0; border-top: 1px solid var(--line); }
+.day-block:first-of-type { border-top: none; padding-top: 0; }
+.day-head { display: flex; align-items: center; gap: 8px; }
+.day-head select { flex: 1; min-width: 0; }
+.day-label { flex: none; width: 36px; font-weight: 650; }
+.day-block.rest .day-label { color: var(--muted); font-weight: 400; }
+.day-block .empty-note { margin: 8px 0 0 44px; }
+
+.day-exercises { list-style: none; margin: 8px 0 0 44px; padding: 0; font-size: 0.86rem; }
+.day-exercises li { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 8px; padding: 3px 0; }
+.day-ex-rx { color: var(--muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.day-exercises .badge { margin-left: 6px; font-size: 0.58rem; padding: 1px 5px; vertical-align: 1px; }
 
 .slot-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
 .slot-grid .field label { white-space: nowrap; }

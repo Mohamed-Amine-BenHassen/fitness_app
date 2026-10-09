@@ -6,7 +6,7 @@
 // re-render on blur would destroy the field the user just tapped. Structural
 // edits (add, remove, reorder) re-render.
 
-import { REST_DAY_KEY } from '../core/program.js';
+import { REST_DAY_KEY, formatPrescription } from '../core/program.js';
 import {
   WEEKDAY_LABELS,
   WEEKDAY_ORDER,
@@ -165,30 +165,85 @@ function renderPlanList(root, ctx) {
 
 // ---------- one plan ----------
 
-function scheduleCard(ctx, plan) {
+const editSession = (ctx, plan, key) => () => ctx.actions.planNav({ view: 'session', planId: plan.id, sessionKey: key });
+
+// The session's exercises as read-only lines: name, prescription, anchor.
+function exerciseLines(ctx, key) {
+  const { exercises } = resolveSession(ctx.state, key);
+  if (exercises.length === 0) return el('p', { class: 'empty-note' }, 'No exercises yet.');
+  return el(
+    'ul',
+    { class: 'day-exercises' },
+    exercises.map((e) =>
+      el('li', {}, [
+        el('span', { class: 'day-ex-name' }, [e.name, e.anchor ? el('span', { class: 'badge' }, 'anchor') : null]),
+        el('span', { class: 'day-ex-rx' }, formatPrescription(e))
+      ])
+    )
+  );
+}
+
+// The week, day by day: pick each day's session and see its exercises in place.
+function weekCard(ctx, plan) {
   const sessions = liveSessions(plan);
   return card(null, [
-    el('h3', {}, 'Weekly schedule'),
-    el(
-      'div',
-      { class: 'schedule' },
-      WEEKDAY_ORDER.map((weekday) => {
-        const select = el(
-          'select',
-          {
-            id: `schedule-${weekday}`,
-            autocomplete: 'off',
-            onchange: (e) => ctx.actions.change((s) => setSchedule(s, plan.id, weekday, e.target.value), QUIET)
-          },
-          [...sessions.map((s) => el('option', { value: s.key }, s.name)), el('option', { value: REST_DAY_KEY }, 'Rest')]
-        );
-        select.value = plan.schedule[weekday];
-        return el('div', { class: 'schedule-row' }, [
-          el('label', { for: select.id }, WEEKDAY_LABELS[weekday]),
-          select
-        ]);
+    el('h3', {}, 'Week'),
+    ...WEEKDAY_ORDER.map((weekday) => {
+      const key = plan.schedule[weekday];
+      const isRest = key === REST_DAY_KEY;
+      const select = el(
+        'select',
+        {
+          id: `schedule-${weekday}`,
+          autocomplete: 'off',
+          'aria-label': `${WEEKDAY_LABELS[weekday]} session`,
+          // Re-render so the exercise list under the day follows the choice.
+          onchange: (e) => ctx.actions.change((s) => setSchedule(s, plan.id, weekday, e.target.value))
+        },
+        [...sessions.map((s) => el('option', { value: s.key }, s.focus ? `${s.name} — ${s.focus}` : s.name)), el('option', { value: REST_DAY_KEY }, 'Rest')]
+      );
+      select.value = key;
+      return el('section', { class: isRest ? 'day-block rest' : 'day-block' }, [
+        el('div', { class: 'day-head' }, [
+          el('label', { for: select.id, class: 'day-label' }, WEEKDAY_LABELS[weekday]),
+          select,
+          isRest ? null : el('button', { type: 'button', onclick: editSession(ctx, plan, key) }, 'Edit')
+        ]),
+        isRest ? null : exerciseLines(ctx, key)
+      ]);
+    })
+  ]);
+}
+
+// Sessions that aren't on any day, plus adding a new one.
+function otherSessionsCard(ctx, plan) {
+  const { state, actions } = ctx;
+  const scheduled = new Set(plan.schedule);
+  const unscheduled = liveSessions(plan).filter((s) => !scheduled.has(s.key));
+  return card(null, [
+    el('h3', {}, 'Not on the schedule'),
+    unscheduled.length === 0
+      ? el('p', { class: 'empty-note' }, 'Every session is on a day.')
+      : el(
+          'ul',
+          { class: 'entry-list' },
+          unscheduled.map((session) =>
+            el('li', { class: 'entry-row' }, [
+              el('span', { class: 'entry-label' }, [
+                session.name,
+                el('span', { class: 'entry-time' }, ` · ${session.slots.length} exercises`)
+              ]),
+              el('button', { type: 'button', onclick: editSession(ctx, plan, session.key) }, 'Edit')
+            ])
+          )
+        ),
+    el('div', { style: 'margin-top: 10px' }, [
+      addForm('new-session-name', 'New session name', 'Add', (name) => {
+        const key = nextSessionKey(state);
+        actions.change((s) => addSession(s, plan.id, { key, name }));
+        actions.planNav({ view: 'session', planId: plan.id, sessionKey: key });
       })
-    )
+    ])
   ]);
 }
 
@@ -209,36 +264,8 @@ function renderPlanScreen(root, ctx, plan) {
             'Make this my active plan'
           )
     ]),
-    scheduleCard(ctx, plan),
-    card(null, [
-      el('h3', {}, 'Sessions'),
-      liveSessions(plan).length === 0
-        ? el('p', { class: 'empty-note' }, 'No sessions yet. Add one below.')
-        : el(
-            'ul',
-            { class: 'entry-list' },
-            liveSessions(plan).map((session) =>
-              el('li', { class: 'entry-row' }, [
-                el('span', { class: 'entry-label' }, [
-                  session.name,
-                  el('span', { class: 'entry-time' }, ` · ${session.slots.length} exercises${session.focus ? ` · ${session.focus}` : ''}`)
-                ]),
-                el(
-                  'button',
-                  { type: 'button', onclick: () => actions.planNav({ view: 'session', planId: plan.id, sessionKey: session.key }) },
-                  'Edit'
-                )
-              ])
-            )
-          ),
-      el('div', { style: 'margin-top: 10px' }, [
-        addForm('new-session-name', 'New session name', 'Add', (name) => {
-          const key = nextSessionKey(state);
-          actions.change((s) => addSession(s, plan.id, { key, name }));
-          actions.planNav({ view: 'session', planId: plan.id, sessionKey: key });
-        })
-      ])
-    ]),
+    weekCard(ctx, plan),
+    otherSessionsCard(ctx, plan),
     archivedSessions.length
       ? card(null, [
           el('h3', {}, 'Archived sessions'),
