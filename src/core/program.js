@@ -1,5 +1,7 @@
-// Seed data for the training program. Source of truth is plan.md — change that
-// file first, then mirror it here. Pure module: no DOM, no storage, no clock.
+// The default plan, seeded into a new install and into data upgraded from
+// schema v1. It mirrors plan.md. Once seeded, the user's plans live in state and
+// are edited in the Plan tab — src/core/plans.js reads them, not this file.
+// Pure module: no DOM, no storage, no clock.
 
 const ex = (id, name, sets, min, max, restSec, opts = {}) => ({
   id,
@@ -102,24 +104,49 @@ export const WEEKLY_SCHEDULE = ['rest', 'pushA', 'pullA', 'legsA', 'pushB', 'pul
 
 export const TRAINING_KEYS = ['pushA', 'pullA', 'legsA', 'pushB', 'pullB', 'legsB'];
 
-export function dayKeyForWeekday(weekday) {
-  return WEEKLY_SCHEDULE[weekday] ?? REST_DAY_KEY;
-}
+export const SEED_PLAN_ID = 'plan-1';
 
-export function getSession(dayKey) {
-  return SESSIONS[dayKey] || SESSIONS.rest;
-}
-
-export function sessionForWeekday(weekday) {
-  return getSession(dayKeyForWeekday(weekday));
-}
-
-export function exerciseById(exerciseId) {
+// Library entries hold what is true of the movement everywhere; the per-session
+// prescription (sets, reps, rest, note, anchor) lives on the plan's slots.
+export function seedLibrary() {
+  const library = {};
   for (const key of TRAINING_KEYS) {
-    const found = SESSIONS[key].exercises.find((e) => e.id === exerciseId);
-    if (found) return found;
+    for (const e of SESSIONS[key].exercises) {
+      library[e.id] ??= {
+        id: e.id,
+        name: e.name,
+        bodyweightOnly: e.bodyweightOnly,
+        perSide: e.perSide,
+        technique: '',
+        archived: false
+      };
+    }
   }
-  return null;
+  return library;
+}
+
+export function seedPlan() {
+  return {
+    id: SEED_PLAN_ID,
+    name: 'PPL Build v3',
+    archived: false,
+    schedule: WEEKLY_SCHEDULE.slice(),
+    // Keys stay pushA … legsB so history logged under schema v1 still matches.
+    sessions: TRAINING_KEYS.map((key) => ({
+      key,
+      name: SESSIONS[key].name,
+      focus: SESSIONS[key].focus,
+      archived: false,
+      slots: SESSIONS[key].exercises.map((e) => ({
+        exerciseId: e.id,
+        sets: e.sets,
+        repRange: { ...e.repRange },
+        restSec: e.restSec,
+        note: e.note,
+        anchor: e.anchor
+      }))
+    }))
+  };
 }
 
 export function formatRest(restSec) {

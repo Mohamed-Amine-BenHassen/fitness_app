@@ -1,5 +1,5 @@
-// Technique dialog: how to perform an exercise. Content lives in
-// src/core/techniques.js. The dialog is appended to <body>, outside #view, so a
+// Technique dialog: how to perform an exercise. Built-in content lives in
+// src/core/techniques.js; the user's own notes come from the exercise library. The dialog is appended to <body>, outside #view, so a
 // re-render of the tab underneath never closes it.
 
 import { techniqueFor, videoSearchUrl } from '../core/techniques.js';
@@ -12,11 +12,24 @@ function section(title, items, ordered = false) {
   ]);
 }
 
+// The user's own notes from the exercise library, one paragraph per line.
+function userNotes(text) {
+  if (!text) return null;
+  return el('section', { class: 'tech-section' }, [
+    el('h3', {}, 'Your notes'),
+    ...text.split(/\n+/).map((line) => el('p', { class: 'tech-note' }, line))
+  ]);
+}
+
 function body(exercise, technique) {
   if (!technique) {
-    return [el('p', { class: 'empty-note' }, 'No technique notes for this exercise yet.')];
+    return [
+      userNotes(exercise.technique) ||
+        el('p', { class: 'empty-note' }, 'No technique notes yet. Add your own in Plan → Exercise library.')
+    ];
   }
   return [
+    userNotes(exercise.technique),
     el('p', { class: 'tech-muscles' }, technique.muscles.join(' · ')),
     technique.variants
       ? el('section', { class: 'tech-section' }, [

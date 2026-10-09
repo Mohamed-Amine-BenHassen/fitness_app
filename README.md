@@ -6,9 +6,14 @@ screen and keeps everything in the browser's local storage.
 
 ## What it does
 
-- **Today's workout** — picks the session from the 6-day Push/Pull/Legs split in
-  [`plan.md`](plan.md) (Mon Push A → Sat Legs B, Sun rest). A picker lets you log a
-  different session when you miss a day.
+- **Today's workout** — picks today's session from your active plan's weekly
+  schedule. A picker lets you log a different session when you miss a day.
+- **Plans** — build and save several plans and choose which one is active. Edit
+  each session's exercises (add, remove, reorder, swap) and their sets, reps and
+  rest, and set which session falls on each weekday. History follows the
+  exercise: renaming keeps it, swapping in another exercise shows that one's.
+  Plans, sessions and exercises are archived rather than deleted, so old logs
+  keep their names. The default plan is the 6-day split in [`plan.md`](plan.md).
 - **Set logger** — weight × reps per set, with the numbers from the last time you
   did that exercise shown above the inputs. The inputs prefill from your last set.
 - **Protein counter** — a daily total against 190 g, with quick-add buttons you

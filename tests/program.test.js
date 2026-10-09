@@ -4,29 +4,18 @@ import {
   SESSIONS,
   TRAINING_KEYS,
   WEEKLY_SCHEDULE,
-  dayKeyForWeekday,
-  exerciseById,
   formatPrescription,
   formatRest,
-  getSession,
-  sessionForWeekday
+  seedLibrary,
+  seedPlan
 } from '../src/core/program.js';
 
-test('the weekly schedule matches plan.md', () => {
-  assert.equal(dayKeyForWeekday(1), 'pushA');
-  assert.equal(dayKeyForWeekday(2), 'pullA');
-  assert.equal(dayKeyForWeekday(3), 'legsA');
-  assert.equal(dayKeyForWeekday(4), 'pushB');
-  assert.equal(dayKeyForWeekday(5), 'pullB');
-  assert.equal(dayKeyForWeekday(6), 'legsB');
-  assert.equal(dayKeyForWeekday(0), 'rest');
-  assert.equal(WEEKLY_SCHEDULE.length, 7);
-});
+// Seed lookups, the way the app saw the fixed program before plans were editable.
+const seedExercise = (id) =>
+  TRAINING_KEYS.flatMap((key) => SESSIONS[key].exercises).find((e) => e.id === id) || null;
 
-test('Sunday resolves to an empty rest session', () => {
-  const session = sessionForWeekday(0);
-  assert.equal(session.name, 'Rest');
-  assert.deepEqual(session.exercises, []);
+test('the weekly schedule matches plan.md', () => {
+  assert.deepEqual(WEEKLY_SCHEDULE, ['rest', 'pushA', 'pullA', 'legsA', 'pushB', 'pullB', 'legsB']);
 });
 
 test('every training session has six exercises and exactly one anchor', () => {
@@ -53,13 +42,36 @@ test('ids are unique within a session', () => {
 });
 
 test('bodyweight and per-side flags come from the plan notes', () => {
-  assert.equal(exerciseById('hanging-leg-raise').bodyweightOnly, true);
-  assert.equal(exerciseById('bulgarian-split-squat').perSide, true);
-  assert.equal(exerciseById('back-squat').bodyweightOnly, false);
+  assert.equal(seedExercise('hanging-leg-raise').bodyweightOnly, true);
+  assert.equal(seedExercise('bulgarian-split-squat').perSide, true);
+  assert.equal(seedExercise('back-squat').bodyweightOnly, false);
 });
 
-test('exerciseById returns null for an unknown id', () => {
-  assert.equal(exerciseById('nope'), null);
+test('the seed library has every exercise once, with its flags', () => {
+  const library = seedLibrary();
+  const ids = new Set(TRAINING_KEYS.flatMap((key) => SESSIONS[key].exercises.map((e) => e.id)));
+  assert.deepEqual(new Set(Object.keys(library)), ids);
+  assert.equal(library['hanging-leg-raise'].bodyweightOnly, true);
+  assert.equal(library['single-arm-db-row'].perSide, true);
+  assert.equal(library['incline-db-press'].archived, false);
+});
+
+test('the seed plan keeps the v1 session keys and per-session prescriptions', () => {
+  const plan = seedPlan();
+  assert.deepEqual(plan.sessions.map((s) => s.key), TRAINING_KEYS);
+  assert.deepEqual(plan.schedule, WEEKLY_SCHEDULE);
+  // Incline DB Press is prescribed differently in Push A and Push B.
+  const slot = (key) => plan.sessions.find((s) => s.key === key).slots.find((x) => x.exerciseId === 'incline-db-press');
+  assert.equal(slot('pushA').sets, 4);
+  assert.deepEqual(slot('pushB').repRange, { min: 8, max: 12 });
+});
+
+test('each seedPlan call returns an independent copy', () => {
+  const a = seedPlan();
+  a.sessions[0].slots[0].sets = 99;
+  a.schedule[0] = 'pushA';
+  assert.equal(seedPlan().sessions[0].slots[0].sets, 4);
+  assert.equal(seedPlan().schedule[0], 'rest');
 });
 
 test('rest formatting stays readable', () => {
@@ -70,9 +82,5 @@ test('rest formatting stays readable', () => {
 });
 
 test('prescription line reads like the plan', () => {
-  assert.equal(formatPrescription(exerciseById('back-squat')), '4 x 6-8 · rest 3m');
-});
-
-test('an unknown day key falls back to rest', () => {
-  assert.equal(getSession('bogus').key, 'rest');
+  assert.equal(formatPrescription(seedExercise('back-squat')), '4 x 6-8 · rest 3m');
 });

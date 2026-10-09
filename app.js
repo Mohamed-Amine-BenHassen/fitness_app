@@ -3,7 +3,8 @@
 
 import { load, loadTimer, save, saveTimer, storageBytes } from './src/data/store.js';
 import { adjustTimer, isStale, startTimer } from './src/core/timer.js';
-import { dayKeyForWeekday, getSession } from './src/core/program.js';
+import { REST_DAY_KEY } from './src/core/program.js';
+import { activePlan, resolveSession, scheduledKey } from './src/core/plans.js';
 import { formatHuman, localDateKey, weekdayOf } from './src/core/dates.js';
 import { addSet, removeSet } from './src/core/sets.js';
 import {
@@ -16,6 +17,7 @@ import {
 import { renderWorkout } from './src/ui/workout.js';
 import { renderProtein } from './src/ui/protein.js';
 import { renderBackup } from './src/ui/backup-ui.js';
+import { renderPlan } from './src/ui/plan.js';
 import { createTimerBar, unlockAudio } from './src/ui/timer-bar.js';
 
 const view = document.getElementById('view');
@@ -24,7 +26,7 @@ const dateEl = document.getElementById('app-date');
 const toastEl = document.getElementById('toast');
 const tabs = [...document.querySelectorAll('.tab')];
 
-const TITLES = { protein: 'Protein', backup: 'Backup' };
+const TITLES = { plan: 'Plan', protein: 'Protein', backup: 'Backup' };
 
 let state = load();
 
@@ -33,12 +35,14 @@ const ui = {
   dateKey: localDateKey(new Date()),
   dayKey: 'rest',
   todayDayKey: 'rest',
-  editingQuickAdds: false
+  editingQuickAdds: false,
+  // Where the Plan tab is: view is list | plan | session | pick | library | exercise.
+  plan: { view: 'list', planId: null, sessionKey: null, mode: null, slotIndex: null, exerciseId: null }
 };
 
 function syncToday() {
   const dateKey = localDateKey(new Date());
-  const todayDayKey = dayKeyForWeekday(weekdayOf(dateKey));
+  const todayDayKey = scheduledKey(state, weekdayOf(dateKey));
   const rolledOver = dateKey !== ui.dateKey;
   ui.dateKey = dateKey;
   ui.todayDayKey = todayDayKey;
@@ -62,7 +66,17 @@ function commit(next, { rerender = true } = {}) {
   state = next;
   const result = save(state);
   if (!result.ok) toast('Could not save — device storage may be full.');
+  reconcileDay();
   if (rerender) render();
+}
+
+// Plan edits can move today's session or switch plans entirely. Keep the
+// Workout tab on a session of the active plan; a deliberate pick of another
+// session in the same plan, or of rest, is left alone.
+function reconcileDay() {
+  ui.todayDayKey = scheduledKey(state, weekdayOf(ui.dateKey));
+  if (ui.dayKey === REST_DAY_KEY) return;
+  if (!activePlan(state).sessions.some((s) => s.key === ui.dayKey)) ui.dayKey = ui.todayDayKey;
 }
 
 // The rest timer is outside `state`: it is per-device, never backed up, and
@@ -131,7 +145,21 @@ const actions = {
     render();
   },
 
+  // Applies a pure state → state edit (from src/core) and returns the new state,
+  // so a field saved without re-rendering can show the normalised value.
+  change(fn, options) {
+    const next = fn(state);
+    if (next !== state) commit(next, options);
+    return state;
+  },
+
+  planNav(patch) {
+    Object.assign(ui.plan, patch);
+    render({ resetScroll: true });
+  },
+
   replaceState(next) {
+    ui.plan.view = 'list';
     commit(next);
     toast('Backup restored.');
   }
@@ -144,7 +172,7 @@ function render({ resetScroll = false } = {}) {
   const scrollY = window.scrollY;
   const ctx = { state, ui, actions, storageBytes };
 
-  titleEl.textContent = ui.tab === 'workout' ? getSession(ui.dayKey).name : TITLES[ui.tab];
+  titleEl.textContent = ui.tab === 'workout' ? resolveSession(state, ui.dayKey).name : TITLES[ui.tab];
   dateEl.textContent = formatHuman(ui.dateKey);
 
   for (const tab of tabs) {
@@ -153,6 +181,7 @@ function render({ resetScroll = false } = {}) {
   }
 
   if (ui.tab === 'workout') renderWorkout(view, ctx);
+  else if (ui.tab === 'plan') renderPlan(view, ctx);
   else if (ui.tab === 'protein') renderProtein(view, ctx);
   else renderBackup(view, ctx);
 

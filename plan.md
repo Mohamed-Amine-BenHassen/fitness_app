@@ -2,7 +2,7 @@ Training Plan — PPL Build v3
 
 
 
-Source of truth for the app's seed data. Format per exercise: Exercise | sets x rep range | rest | note "A / B" in a name = either variant counts (log whichever I did).
+The app's default plan: seeded on first install and when upgrading older data. After that, plans are edited in the app's Plan tab — changing this file does not change an installed app. Format per exercise: Exercise | sets x rep range | rest | note "A / B" in a name = either variant counts (log whichever I did).
 
 
 

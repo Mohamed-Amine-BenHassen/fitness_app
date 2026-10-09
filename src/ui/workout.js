@@ -1,17 +1,22 @@
 // Workout tab: session picker, today's exercises, set logging with a last-time
 // reference line. All calculations come from src/core; this file only renders.
 
-import { SESSIONS, TRAINING_KEYS, formatPrescription, formatRest, getSession } from '../core/program.js';
-import { formatHuman, formatRelative } from '../core/dates.js';
+import { formatPrescription, formatRest } from '../core/program.js';
+import { activePlan, liveSessions, resolveSession, sessionName } from '../core/plans.js';
+import { formatRelative } from '../core/dates.js';
 import { formatSet, formatSets, lastPerformance, setsFor } from '../core/sets.js';
 import { sessionId } from '../core/schema.js';
 import { card, clear, el, numberValue } from './dom.js';
 import { openTechnique } from './technique.js';
 
 function sessionPicker(ctx) {
-  const { ui, actions } = ctx;
-  const options = [...TRAINING_KEYS, 'rest'].map((key) => {
-    const session = SESSIONS[key];
+  const { state, ui, actions } = ctx;
+  const keys = liveSessions(activePlan(state)).map((s) => s.key);
+  // A session picked before it was archived (or from another plan) stays listed
+  // so the select can still show it.
+  if (ui.dayKey !== 'rest' && !keys.includes(ui.dayKey)) keys.push(ui.dayKey);
+  const options = [...keys, 'rest'].map((key) => {
+    const session = resolveSession(state, key);
     const label = session.focus ? `${session.name} — ${session.focus}` : session.name;
     const suffix = key === ui.todayDayKey ? ' (today)' : '';
     return el('option', { value: key }, `${label}${suffix}`);
@@ -35,17 +40,15 @@ function sessionPicker(ctx) {
 }
 
 function restCard(ctx) {
-  const isToday = ctx.ui.dayKey === ctx.ui.todayDayKey;
-  return card('rest-card', [
-    el('h2', {}, 'Rest day'),
-    el(
-      'p',
-      {},
-      isToday
-        ? 'Nothing scheduled. Pick a session above to log a make-up workout.'
-        : 'No exercises in this session.'
-    )
-  ]);
+  const { state, ui } = ctx;
+  const isRest = ui.dayKey === 'rest';
+  const planEmpty = liveSessions(activePlan(state)).length === 0;
+  let message = 'No exercises in this session yet. Add them in the Plan tab.';
+  if (isRest && planEmpty) message = 'This plan has no sessions yet. Build one in the Plan tab.';
+  else if (isRest && ui.dayKey === ui.todayDayKey) {
+    message = 'Nothing scheduled. Pick a session above to log a make-up workout.';
+  } else if (isRest) message = 'Pick a session above to log a workout.';
+  return card('rest-card', [el('h2', {}, isRest ? 'Rest day' : 'Empty session'), el('p', {}, message)]);
 }
 
 function lastLine(exercise, ctx) {
@@ -55,7 +58,7 @@ function lastLine(exercise, ctx) {
     return el('p', { class: 'last empty' }, 'No history yet — this is the baseline.');
   }
   const when = formatRelative(last.dateKey, ui.dateKey);
-  const where = getSession(last.dayKey).name;
+  const where = sessionName(state, last.dayKey);
   return el('p', { class: 'last' }, [
     `Last time (${when}, ${where}): `,
     el('strong', {}, formatSets(last.sets, exercise.bodyweightOnly))
@@ -227,7 +230,7 @@ export function renderWorkout(root, ctx) {
   root.dataset.session = key;
   root.append(sessionPicker(ctx));
 
-  const session = getSession(ctx.ui.dayKey);
+  const session = resolveSession(ctx.state, ctx.ui.dayKey);
   if (session.exercises.length === 0) {
     root.append(restCard(ctx));
     return;
@@ -237,12 +240,4 @@ export function renderWorkout(root, ctx) {
     root.append(exerciseCard(exercise, ctx));
   }
   restoreDrafts(drafts);
-}
-
-export function workoutTitle(ctx) {
-  return getSession(ctx.ui.dayKey).name;
-}
-
-export function workoutSubtitle(ctx) {
-  return formatHuman(ctx.ui.dateKey);
 }
