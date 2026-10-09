@@ -122,6 +122,7 @@ test('summary counts what the backup screen shows', () => {
     sets: 3,
     firstDate: '2026-09-07',
     lastDate: '2026-09-09',
-    nutritionDays: 1
+    nutritionDays: 1,
+    weighIns: 0
   });
 });

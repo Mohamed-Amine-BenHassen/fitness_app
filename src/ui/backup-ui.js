@@ -35,6 +35,7 @@ function summaryCard(ctx) {
       stat('Sessions', String(summary.sessions)),
       stat('Sets', String(summary.sets)),
       stat('Protein days', String(summary.nutritionDays)),
+      stat('Weigh-ins', String(summary.weighIns)),
       stat('Stored', `${Math.max(1, Math.round(ctx.storageBytes() / 1024))} KB`)
     ]),
     el('p', { class: 'meta' }, `Logged span: ${span}`)

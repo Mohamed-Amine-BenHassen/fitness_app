@@ -366,7 +366,7 @@ button.add-set { flex: none; align-self: flex-end; }
   bottom: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   background: rgba(15, 17, 22, 0.96);
   backdrop-filter: blur(8px);
   border-top: 1px solid var(--line);

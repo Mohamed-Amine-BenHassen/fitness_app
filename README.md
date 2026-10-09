@@ -28,6 +28,8 @@ screen and keeps everything in the browser's local storage.
 - **Food list** — search about 50 common foods, enter grams or servings, and it
   logs the protein. Recent foods come first; add your own (e.g. a branded bar)
   with its protein per 100 g. Values are estimates from standard tables.
+- **Body** — one weigh-in a day, with the latest weight, 7-day average, change
+  against the week before, and your protein target in g per kg.
 - **Technique notes** — tap an exercise name for setup, steps, cues and common
   mistakes. Works offline.
 - **Rest timer** — *Start rest* on any exercise counts down its rest time, with

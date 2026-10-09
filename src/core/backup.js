@@ -3,6 +3,7 @@
 import { isDateKey } from './dates.js';
 import { REST_DAY_KEY, seedLibrary, seedPlan } from './program.js';
 import { FOODS, normalizeCustomFood } from './foods.js';
+import { isPlausibleWeight } from './bodyweight.js';
 import {
   SCHEMA_VERSION,
   defaultSettings,
@@ -222,12 +223,12 @@ function normalizeNutrition(raw) {
   return out;
 }
 
-// Plausible adult weights only; anything else is a typo, not a weigh-in.
+// Implausible weights are typos, not weigh-ins.
 function normalizeBodyweight(raw) {
   if (!isPlainObject(raw)) return {};
   const out = {};
   for (const [dateKey, kg] of Object.entries(raw)) {
-    if (isDateKey(dateKey) && Number.isFinite(kg) && kg >= 20 && kg <= 400) out[dateKey] = roundWeight(kg);
+    if (isDateKey(dateKey) && isPlausibleWeight(kg)) out[dateKey] = roundWeight(kg);
   }
   return out;
 }
@@ -277,6 +278,7 @@ export function backupSummary(state) {
     sets: sessions.reduce((t, s) => t + s.entries.reduce((n, e) => n + e.sets.length, 0), 0),
     firstDate: sessions.length ? sessions[0].dateKey : null,
     lastDate: sessions.length ? sessions[sessions.length - 1].dateKey : null,
-    nutritionDays
+    nutritionDays,
+    weighIns: Object.keys(state.bodyweight).length
   };
 }

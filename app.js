@@ -22,6 +22,7 @@ import { renderProtein } from './src/ui/protein.js';
 import { renderBackup } from './src/ui/backup-ui.js';
 import { renderPlan } from './src/ui/plan.js';
 import { renderHistory } from './src/ui/history.js';
+import { renderBody } from './src/ui/body.js';
 import { createTimerBar, unlockAudio } from './src/ui/timer-bar.js';
 
 const view = document.getElementById('view');
@@ -30,7 +31,7 @@ const dateEl = document.getElementById('app-date');
 const toastEl = document.getElementById('toast');
 const tabs = [...document.querySelectorAll('.tab')];
 
-const TITLES = { plan: 'Plan', protein: 'Protein', backup: 'Backup' };
+const TITLES = { plan: 'Plan', protein: 'Protein', body: 'Body', backup: 'Backup' };
 
 let state = load();
 
@@ -219,6 +220,7 @@ function render({ resetScroll = false } = {}) {
   else if (ui.tab === 'workout') renderWorkout(view, ctx);
   else if (ui.tab === 'plan') renderPlan(view, ctx);
   else if (ui.tab === 'protein') renderProtein(view, ctx);
+  else if (ui.tab === 'body') renderBody(view, ctx);
   else renderBackup(view, ctx);
 
   window.scrollTo(0, resetScroll ? 0 : scrollY);
