@@ -54,11 +54,13 @@ function toast(message) {
   }, 2200);
 }
 
-function commit(next) {
+// rerender: false is for edits made in place, where the input already shows the
+// new value and rebuilding the view would steal focus from the next field.
+function commit(next, { rerender = true } = {}) {
   state = next;
   const result = save(state);
   if (!result.ok) toast('Could not save — device storage may be full.');
-  render();
+  if (rerender) render();
 }
 
 const actions = {
@@ -85,16 +87,16 @@ const actions = {
     commit(removeEntry(state, ui.dateKey, index));
   },
 
-  saveQuickAdd(quickAdd) {
-    commit(upsertQuickAdd(state, quickAdd));
+  saveQuickAdd(quickAdd, options) {
+    commit(upsertQuickAdd(state, quickAdd), options);
   },
 
   deleteQuickAdd(id) {
     commit(removeQuickAdd(state, id));
   },
 
-  setTarget(grams) {
-    commit(setProteinTarget(state, grams));
+  setTarget(grams, options) {
+    commit(setProteinTarget(state, grams), options);
   },
 
   toggleQuickAddEditor() {

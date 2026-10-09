@@ -1,7 +1,7 @@
 // Cache-first app shell. Bump CACHE_NAME on EVERY change to a precached file,
 // or the installed app keeps serving the old bundle.
 
-const CACHE_NAME = 'ppl-v2';
+const CACHE_NAME = 'ppl-v3';
 
 const ASSETS = [
   './',

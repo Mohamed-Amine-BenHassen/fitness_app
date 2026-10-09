@@ -80,8 +80,13 @@ function quickAddEditor(ctx) {
       value: String(qa.grams),
       'aria-label': `${qa.label} grams`
     });
+    // Save without re-rendering: 'change' fires on blur, so a re-render here would
+    // destroy the field the user just tapped. The buttons refresh on Done.
     const commit = () =>
-      actions.saveQuickAdd({ id: qa.id, label: label.value, grams: numberValue(grams) ?? 0 });
+      actions.saveQuickAdd(
+        { id: qa.id, label: label.value, grams: numberValue(grams) ?? 0 },
+        { rerender: false }
+      );
 
     label.addEventListener('change', commit);
     grams.addEventListener('change', commit);
@@ -146,7 +151,9 @@ function quickAddEditor(ctx) {
     step: '5',
     value: String(targetOf(state))
   });
-  targetInput.addEventListener('change', () => actions.setTarget(numberValue(targetInput)));
+  targetInput.addEventListener('change', () =>
+    actions.setTarget(numberValue(targetInput), { rerender: false })
+  );
 
   return el('div', { class: 'stack' }, [
     ...rows,

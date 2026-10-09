@@ -4,6 +4,7 @@
 import { SESSIONS, TRAINING_KEYS, formatPrescription, getSession } from '../core/program.js';
 import { formatHuman, formatRelative } from '../core/dates.js';
 import { formatSet, formatSets, lastPerformance, setsFor } from '../core/sets.js';
+import { sessionId } from '../core/schema.js';
 import { card, clear, el, numberValue } from './dom.js';
 
 function sessionPicker(ctx) {
@@ -124,6 +125,12 @@ function addRow(exercise, ctx) {
         value: shown(prefill.weightKg)
       });
 
+  const inputs = [weightInput, repsInput].filter(Boolean);
+  const markDirty = (event) => {
+    event.target.dataset.dirty = '';
+  };
+  for (const input of inputs) input.addEventListener('input', markDirty);
+
   const submit = () => {
     const reps = numberValue(repsInput);
     if (reps === null || reps <= 0) {
@@ -131,6 +138,8 @@ function addRow(exercise, ctx) {
       ctx.actions.toast('Enter reps first.');
       return;
     }
+    // Logged values are no longer a draft; the re-render prefills from this set.
+    for (const input of inputs) delete input.dataset.dirty;
     ctx.actions.addSet(exercise.id, {
       weightKg: weightInput ? numberValue(weightInput) : null,
       reps
@@ -177,8 +186,28 @@ function exerciseCard(exercise, ctx) {
   ]);
 }
 
+// Every render rebuilds all cards, so numbers typed into one exercise but not yet
+// logged would reset when a set is added to another. Carry those drafts over —
+// but only within the same session, so they never leak into a different day.
+function captureDrafts(root, key) {
+  if (root.dataset.session !== key) return [];
+  return [...root.querySelectorAll('input[data-dirty]')].map((input) => [input.id, input.value]);
+}
+
+function restoreDrafts(drafts) {
+  for (const [id, value] of drafts) {
+    const input = document.getElementById(id);
+    if (!input) continue;
+    input.value = value;
+    input.dataset.dirty = '';
+  }
+}
+
 export function renderWorkout(root, ctx) {
+  const key = sessionId(ctx.ui.dateKey, ctx.ui.dayKey);
+  const drafts = captureDrafts(root, key);
   clear(root);
+  root.dataset.session = key;
   root.append(sessionPicker(ctx));
 
   const session = getSession(ctx.ui.dayKey);
@@ -190,6 +219,7 @@ export function renderWorkout(root, ctx) {
   for (const exercise of session.exercises) {
     root.append(exerciseCard(exercise, ctx));
   }
+  restoreDrafts(drafts);
 }
 
 export function workoutTitle(ctx) {
