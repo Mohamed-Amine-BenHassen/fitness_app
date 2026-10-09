@@ -15,7 +15,14 @@ screen and keeps everything in the browser's local storage.
   Plans, sessions and exercises are archived rather than deleted, so old logs
   keep their names. The default plan is the 6-day split in [`plan.md`](plan.md).
 - **Set logger** — weight × reps per set, with the numbers from the last time you
-  did that exercise shown above the inputs. The inputs prefill from your last set.
+  did that exercise shown above the inputs. The inputs prefill with the *Next*
+  target, then with your last set once you've started the exercise.
+- **Progress** — a 🏆 on every set that beats your previous best (heaviest
+  weight, estimated 1RM, or most reps at that weight), ▲/=/▼ against the same
+  set last time, and a *Next:* target by double progression: top of the rep
+  range on every set → add one weight step (a setting on the Plan tab).
+- **History** — past sessions newest first, each session's sets, and each
+  exercise across time with its all-time bests. Read-only.
 - **Protein counter** — a daily total against 190 g, with quick-add buttons you
   edit in the app (label and grams) plus free-text entries.
 - **Food list** — search about 50 common foods, enter grams or servings, and it

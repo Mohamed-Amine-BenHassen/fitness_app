@@ -1,9 +1,9 @@
 // Personal records and estimated 1RM, worked out from logged sets — nothing
 // extra is stored. Pure module.
 //
-// A set is compared with everything logged *before* the session it belongs to,
-// so sets in the same session don't compete, and an old session viewed in
-// history shows the PRs it set at the time.
+// A set is compared with everything logged before it: earlier sessions and the
+// earlier sets of its own session. Four identical top sets earn one trophy, and
+// an old session viewed in history shows the PRs it set at the time.
 
 import { roundWeight, sessionId } from './schema.js';
 
@@ -70,10 +70,12 @@ export function recordFor(set, earlierSets) {
   return set.reps > repBest ? 'reps' : null;
 }
 
-// Records for every set an exercise has in one session, in set order.
+// Records for every set an exercise has in one session, in set order. A first
+// session ever is the baseline throughout, not a PR on its second set.
 export function recordsInSession(state, exerciseId, current, sets) {
   const earlier = setsBefore(state, exerciseId, current);
-  return sets.map((set) => recordFor(set, earlier));
+  if (earlier.length === 0) return sets.map(() => null);
+  return sets.map((set, i) => recordFor(set, [...earlier, ...sets.slice(0, i)]));
 }
 
 export const RECORD_LABELS = { weight: 'Heaviest', e1rm: 'Best e1RM', reps: 'Most reps' };

@@ -73,7 +73,7 @@ test('PRs are judged against sessions before this one only', () => {
     ['2026-09-10', 'pushB', 'incline-db-press', [s(30, 10), s(32.5, 8)]],
     ['2026-09-14', 'pushA', 'incline-db-press', [s(32.5, 8)]]
   );
-  // Sept 10: both sets beat Sept 7; they don't compete with each other.
+  // Sept 10: set 1 beats Sept 7; set 2 beats both.
   assert.deepEqual(
     recordsInSession(state, 'incline-db-press', { dateKey: '2026-09-10', dayKey: 'pushB' }, [s(30, 10), s(32.5, 8)]),
     ['e1rm', 'weight']
@@ -96,4 +96,11 @@ test('compareSets says up, same or down against last time', () => {
   assert.equal(compareSets(s(null, 14), s(null, 12)), 'up');
   assert.equal(compareSets(s(60, 15), s(60, 14)), 'up');
   assert.equal(compareSets(s(30, 8), undefined), null);
+});
+
+test('identical top sets earn one trophy, and a first session is all baseline', () => {
+  const state = logged(['2026-09-25', 'pullB', 'face-pull', [s(17.5, 15)]]);
+  const current = { dateKey: '2026-10-02', dayKey: 'pullB' };
+  assert.deepEqual(recordsInSession(state, 'face-pull', current, [s(20, 15), s(20, 15), s(20, 16)]), ['weight', null, 'reps']);
+  assert.deepEqual(recordsInSession(defaultState(), 'face-pull', current, [s(20, 12), s(25, 12)]), [null, null]);
 });

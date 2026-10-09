@@ -278,6 +278,28 @@ button.add-set { flex: none; align-self: flex-end; }
   margin-bottom: 4px;
 }
 
+.picker-row { display: flex; gap: 8px; }
+.picker-row select { flex: 1; min-width: 0; }
+
+/* ---------- history ---------- */
+
+.history-list { list-style: none; margin: 0; padding: 0; }
+.history-list li + li { margin-top: 8px; }
+.history-list button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 14px;
+  text-align: left;
+  background: var(--surface);
+  border-radius: var(--radius);
+}
+.history-date { margin: 0; font-size: 0.82rem; color: var(--muted); }
+.history-name { font-weight: 650; }
+.history-list .meta { margin: 0; }
+
 .rest-card { text-align: center; padding: 28px 16px; }
 .rest-card p { margin: 6px 0 0; color: var(--muted); }
 

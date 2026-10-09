@@ -21,6 +21,7 @@ import { renderWorkout } from './src/ui/workout.js';
 import { renderProtein } from './src/ui/protein.js';
 import { renderBackup } from './src/ui/backup-ui.js';
 import { renderPlan } from './src/ui/plan.js';
+import { renderHistory } from './src/ui/history.js';
 import { createTimerBar, unlockAudio } from './src/ui/timer-bar.js';
 
 const view = document.getElementById('view');
@@ -40,6 +41,8 @@ const ui = {
   todayDayKey: 'rest',
   editingQuickAdds: false,
   food: { selectedId: null, adding: false },
+  // History inside the Workout tab: view is null (closed) | list | session | exercise.
+  history: { view: null, dateKey: null, dayKey: null, exerciseId: null, from: null },
   // Where the Plan tab is: view is list | plan | session | pick | library | exercise.
   plan: { view: 'list', planId: null, sessionKey: null, mode: null, slotIndex: null, exerciseId: null }
 };
@@ -178,6 +181,11 @@ const actions = {
     return state;
   },
 
+  historyNav(patch) {
+    Object.assign(ui.history, patch);
+    render({ resetScroll: true });
+  },
+
   planNav(patch) {
     Object.assign(ui.plan, patch);
     render({ resetScroll: true });
@@ -197,7 +205,9 @@ function render({ resetScroll = false } = {}) {
   const scrollY = window.scrollY;
   const ctx = { state, ui, actions, storageBytes };
 
-  titleEl.textContent = ui.tab === 'workout' ? resolveSession(state, ui.dayKey).name : TITLES[ui.tab];
+  if (ui.tab === 'workout') {
+    titleEl.textContent = ui.history.view ? 'History' : resolveSession(state, ui.dayKey).name;
+  } else titleEl.textContent = TITLES[ui.tab];
   dateEl.textContent = formatHuman(ui.dateKey);
 
   for (const tab of tabs) {
@@ -205,7 +215,8 @@ function render({ resetScroll = false } = {}) {
     else tab.removeAttribute('aria-current');
   }
 
-  if (ui.tab === 'workout') renderWorkout(view, ctx);
+  if (ui.tab === 'workout' && ui.history.view) renderHistory(view, ctx);
+  else if (ui.tab === 'workout') renderWorkout(view, ctx);
   else if (ui.tab === 'plan') renderPlan(view, ctx);
   else if (ui.tab === 'protein') renderProtein(view, ctx);
   else renderBackup(view, ctx);
@@ -215,7 +226,11 @@ function render({ resetScroll = false } = {}) {
 
 for (const tab of tabs) {
   tab.addEventListener('click', () => {
-    if (ui.tab === tab.dataset.tab) return;
+    // Tapping Workout while in History goes back to today's workout.
+    if (ui.tab === tab.dataset.tab) {
+      if (ui.tab === 'workout' && ui.history.view) actions.historyNav({ view: null });
+      return;
+    }
     ui.tab = tab.dataset.tab;
     ui.editingQuickAdds = false;
     render({ resetScroll: true });

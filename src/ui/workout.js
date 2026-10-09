@@ -38,7 +38,13 @@ function sessionPicker(ctx) {
   // Set after insertion so the selection is the rendered state, not a hint.
   select.value = ui.dayKey;
 
-  return el('div', { class: 'picker' }, [el('label', { for: 'session-select' }, 'Session'), select]);
+  return el('div', { class: 'picker' }, [
+    el('label', { for: 'session-select' }, 'Session'),
+    el('div', { class: 'picker-row' }, [
+      select,
+      el('button', { type: 'button', onclick: () => actions.historyNav({ view: 'list' }) }, 'History')
+    ])
+  ]);
 }
 
 function restCard(ctx) {
