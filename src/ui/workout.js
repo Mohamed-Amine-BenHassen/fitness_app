@@ -6,6 +6,7 @@ import { activePlan, liveSessions, resolveSession, sessionName } from '../core/p
 import { formatRelative } from '../core/dates.js';
 import { formatSet, formatSets, lastPerformance, setsFor } from '../core/sets.js';
 import { RECORD_LABELS, compareSets, recordsInSession } from '../core/records.js';
+import { suggestNext } from '../core/progression.js';
 import { sessionId } from '../core/schema.js';
 import { card, clear, el, numberValue } from './dom.js';
 import { openTechnique } from './technique.js';
@@ -66,6 +67,15 @@ function lastLine(exercise, ctx) {
   ]);
 }
 
+// Double-progression target for today, from last time's sets.
+function nextLine(exercise, ctx) {
+  const { state, ui } = ctx;
+  const next = suggestNext(state, exercise, { dateKey: ui.dateKey, dayKey: ui.dayKey });
+  if (!next) return null;
+  const target = next.weightKg === null ? `${next.reps} reps` : `${next.weightKg} kg × ${next.reps}`;
+  return el('p', { class: 'next' }, [el('strong', {}, `Next: ${target}`), ` · ${next.reason}`]);
+}
+
 const TREND = { up: ['▲', 'better than last time'], same: ['=', 'same as last time'], down: ['▼', 'below last time'] };
 
 function loggedSets(exercise, ctx) {
@@ -107,14 +117,14 @@ function loggedSets(exercise, ctx) {
   );
 }
 
-// Prefill from today's last set if there is one, otherwise from the last session —
-// the common case is repeating or nudging the previous numbers.
+// Prefill from today's last set if there is one (repeat or nudge it), otherwise
+// from the progression suggestion for this session.
 function prefillFor(exercise, ctx) {
   const { state, ui } = ctx;
   const today = setsFor(state, ui.dateKey, ui.dayKey, exercise.id);
   if (today.length > 0) return today[today.length - 1];
-  const last = lastPerformance(state, exercise.id, { dateKey: ui.dateKey, dayKey: ui.dayKey });
-  if (last) return last.sets[last.sets.length - 1];
+  const next = suggestNext(state, exercise, { dateKey: ui.dateKey, dayKey: ui.dayKey });
+  if (next) return next;
   return { weightKg: null, reps: null };
 }
 
@@ -211,6 +221,7 @@ function exerciseCard(exercise, ctx) {
       exercise.note ? el('span', { class: 'note' }, ` · ${exercise.note}`) : null
     ]),
     lastLine(exercise, ctx),
+    nextLine(exercise, ctx),
     loggedSets(exercise, ctx),
     addRow(exercise, ctx),
     el(

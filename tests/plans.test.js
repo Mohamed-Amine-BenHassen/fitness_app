@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultState } from '../src/core/schema.js';
+import { SCHEMA_VERSION, defaultState } from '../src/core/schema.js';
 import { addSet, lastPerformance } from '../src/core/sets.js';
 import { migrate, parseBackup, serializeBackup } from '../src/core/backup.js';
 import {
@@ -291,7 +291,7 @@ test('a v1 backup imports with its history intact and the default plan seeded', 
   const result = parseBackup(JSON.stringify(v1Backup));
   assert.equal(result.ok, true);
   const state = result.state;
-  assert.equal(state.schemaVersion, 2);
+  assert.equal(state.schemaVersion, SCHEMA_VERSION);
   assert.equal(state.settings.proteinTargetG, 200);
   assert.equal(state.settings.activePlanId, 'plan-1');
   assert.equal(state.plans.length, 1);

@@ -91,8 +91,9 @@ test('compareSets says up, same or down against last time', () => {
   assert.equal(compareSets(s(30, 9), s(30, 8)), 'up');
   assert.equal(compareSets(s(30, 8), s(30, 8)), 'same');
   assert.equal(compareSets(s(27.5, 8), s(30, 8)), 'down');
-  assert.equal(compareSets(s(32.5, 6), s(30, 10)), 'down'); // e1RM 39 vs 40
+  assert.equal(compareSets(s(32.5, 6), s(30, 10)), 'up'); // heavier counts, even with fewer reps
+  assert.equal(compareSets(s(27.5, 12), s(30, 8)), 'down');
   assert.equal(compareSets(s(null, 14), s(null, 12)), 'up');
-  assert.equal(compareSets(s(60, 15), s(60, 14)), 'up'); // beyond e1RM: reps decide
+  assert.equal(compareSets(s(60, 15), s(60, 14)), 'up');
   assert.equal(compareSets(s(30, 8), undefined), null);
 });

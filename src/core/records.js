@@ -79,15 +79,11 @@ export function recordsInSession(state, exerciseId, current, sets) {
 export const RECORD_LABELS = { weight: 'Heaviest', e1rm: 'Best e1RM', reps: 'Most reps' };
 
 // Set i today against set i last time: 'up', 'same' or 'down'; null when there
-// is nothing to compare. e1RM when both can be estimated, otherwise weight then reps.
+// is nothing to compare. Heavier is up even with fewer reps — that is the point
+// of adding weight — and at the same weight, reps decide.
 export function compareSets(set, previous) {
   if (!previous) return null;
-  const a = estimate1RM(set);
-  const b = estimate1RM(previous);
-  let diff;
-  if (a !== null && b !== null) diff = a - b;
-  else if ((set.weightKg ?? 0) !== (previous.weightKg ?? 0)) diff = (set.weightKg ?? 0) - (previous.weightKg ?? 0);
-  else diff = set.reps - previous.reps;
+  const diff = (set.weightKg ?? 0) - (previous.weightKg ?? 0) || set.reps - previous.reps;
   if (Math.abs(diff) < 0.005) return 'same';
   return diff > 0 ? 'up' : 'down';
 }

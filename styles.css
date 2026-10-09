@@ -93,6 +93,8 @@ body {
   color: var(--muted);
 }
 .last strong { color: var(--text); font-weight: 600; }
+.next { margin: 6px 0 0; padding: 0 10px; font-size: 0.83rem; color: var(--muted); }
+.next strong { color: var(--accent); font-weight: 650; }
 .last.empty { font-style: italic; }
 
 /* Exercise name opens the technique dialog; looks like a heading, dotted to hint it's tappable. */

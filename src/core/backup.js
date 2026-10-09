@@ -10,7 +10,8 @@ import {
   clampNonNegative,
   normalizeExercise,
   normalizeSet,
-  normalizeSlot
+  normalizeSlot,
+  roundWeight
 } from './schema.js';
 
 export function backupFilename(dateKey) {
@@ -26,7 +27,8 @@ export function buildBackup(state, exportedAt) {
     library: state.library,
     plans: state.plans,
     sessions: state.sessions,
-    nutrition: state.nutrition
+    nutrition: state.nutrition,
+    bodyweight: state.bodyweight
   };
 }
 
@@ -66,6 +68,9 @@ export function validateBackup(data) {
   if (data.plans !== undefined && !Array.isArray(data.plans)) {
     errors.push('"plans" must be an array.');
   }
+  if (data.bodyweight !== undefined && !isPlainObject(data.bodyweight)) {
+    errors.push('"bodyweight" must be an object keyed by date.');
+  }
   return { ok: errors.length === 0, errors };
 }
 
@@ -82,6 +87,7 @@ function normalizeSettings(raw) {
           grams: Math.round(clampNonNegative(qa.grams))
         }))
     : fallback.quickAdds;
+  const step = roundWeight(clampNonNegative(raw.weightStepKg));
   const seenFoods = new Set(FOODS.map((f) => f.id));
   const customFoods = (Array.isArray(raw.customFoods) ? raw.customFoods : [])
     .map(normalizeCustomFood)
@@ -94,7 +100,8 @@ function normalizeSettings(raw) {
     quickAdds,
     activePlanId: typeof raw.activePlanId === 'string' ? raw.activePlanId : fallback.activePlanId,
     customFoods,
-    recentFoodIds
+    recentFoodIds,
+    weightStepKg: step >= 0.25 && step <= 50 ? step : fallback.weightStepKg
   };
 }
 
@@ -215,12 +222,23 @@ function normalizeNutrition(raw) {
   return out;
 }
 
+// Plausible adult weights only; anything else is a typo, not a weigh-in.
+function normalizeBodyweight(raw) {
+  if (!isPlainObject(raw)) return {};
+  const out = {};
+  for (const [dateKey, kg] of Object.entries(raw)) {
+    if (isDateKey(dateKey) && Number.isFinite(kg) && kg >= 20 && kg <= 400) out[dateKey] = roundWeight(kg);
+  }
+  return out;
+}
+
 // Coerces any accepted backup (or a stored blob from an older schema) into the
 // current state shape. Add a case here whenever SCHEMA_VERSION is bumped.
 //
 // v1 → v2: v1 has no `library` or `plans`, so both are seeded with the default
 // plan, whose session keys (pushA … legsB) match the keys v1 history was logged
 // under. Sessions and nutrition are untouched.
+// v2 → v3: adds an empty `bodyweight` and the default weight step.
 export function migrate(data) {
   if (!isPlainObject(data)) return defaultState();
   const library = normalizeLibrary(data.library);
@@ -234,7 +252,8 @@ export function migrate(data) {
     library,
     plans,
     sessions: normalizeSessions(data.sessions),
-    nutrition: normalizeNutrition(data.nutrition)
+    nutrition: normalizeNutrition(data.nutrition),
+    bodyweight: normalizeBodyweight(data.bodyweight)
   };
 }
 

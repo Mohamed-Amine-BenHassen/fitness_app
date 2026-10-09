@@ -20,6 +20,7 @@ const ASSETS = [
   './src/core/plans.js',
   './src/core/foods.js',
   './src/core/records.js',
+  './src/core/progression.js',
   './src/data/store.js',
   './src/ui/dom.js',
   './src/ui/workout.js',

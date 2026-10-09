@@ -42,6 +42,7 @@ import {
   updateSlot,
   upsertExercise
 } from '../core/plans.js';
+import { setWeightStep, weightStepOf } from '../core/progression.js';
 import { card, clear, el, numberValue } from './dom.js';
 import { openTechnique } from './technique.js';
 
@@ -99,6 +100,28 @@ function searchBox(ctx, id, list) {
 
 // ---------- plan list ----------
 
+function progressionCard(ctx) {
+  const { state, actions } = ctx;
+  const input = el('input', {
+    type: 'number',
+    id: 'weight-step',
+    inputmode: 'decimal',
+    min: '0.25',
+    step: '0.25',
+    value: String(weightStepOf(state))
+  });
+  input.addEventListener('change', () => {
+    const value = numberValue(input);
+    const next = actions.change((s) => setWeightStep(s, value ?? 0), QUIET);
+    input.value = String(weightStepOf(next)); // show what was kept if the value was refused
+  });
+  return card(null, [
+    el('h3', {}, 'Progression'),
+    el('div', { class: 'quick-edit-row' }, [el('label', { for: 'weight-step', class: 'entry-label' }, 'Weight step (kg)'), input]),
+    el('p', { class: 'meta' }, 'When you hit the top of the rep range on every set, the Workout tab suggests adding this much.')
+  ]);
+}
+
 function renderPlanList(root, ctx) {
   const { state, actions } = ctx;
   const active = activePlan(state);
@@ -136,6 +159,7 @@ function renderPlanList(root, ctx) {
         actions.planNav({ view: 'plan', planId: id });
       })
     ]),
+    progressionCard(ctx),
     card(null, [
       el('h3', {}, 'Exercise library'),
       el('p', { class: 'empty-note' }, 'Rename exercises, add your own, and write technique notes.'),

@@ -4,8 +4,9 @@ import { SEED_PLAN_ID, seedLibrary, seedPlan } from './program.js';
 
 // v2 added the exercise library and editable plans (`library`, `plans`,
 // `settings.activePlanId`) and the food list (`settings.customFoods`,
-// `settings.recentFoodIds`). backup.js#migrate upgrades v1 data.
-export const SCHEMA_VERSION = 2;
+// `settings.recentFoodIds`). v3 added `bodyweight` (kg by date) and
+// `settings.weightStepKg`. backup.js#migrate upgrades older data.
+export const SCHEMA_VERSION = 3;
 
 // plan.md leaves the quick-add gram values blank; they are edited in-app.
 export function defaultSettings() {
@@ -18,7 +19,8 @@ export function defaultSettings() {
     ],
     activePlanId: SEED_PLAN_ID,
     customFoods: [],
-    recentFoodIds: []
+    recentFoodIds: [],
+    weightStepKg: 2.5
   };
 }
 
@@ -29,7 +31,8 @@ export function defaultState() {
     library: seedLibrary(),
     plans: [seedPlan()],
     sessions: [],
-    nutrition: {}
+    nutrition: {},
+    bodyweight: {}
   };
 }
 
