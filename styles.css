@@ -299,6 +299,12 @@ button.add-set { flex: none; align-self: flex-end; }
 .entry-time { color: var(--muted); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
 .entry-grams { font-variant-numeric: tabular-nums; font-weight: 600; }
 
+.food-results { margin-top: 10px; }
+.food-results .pick-list { margin-top: 0; max-height: none; }
+.food-selected .card-head strong { font-size: 1rem; }
+.food-preview { flex: 1; margin: 0; font-size: 1.1rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.food-form .add-row { margin-top: 0; }
+
 /* ---------- backup ---------- */
 
 .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 0; }

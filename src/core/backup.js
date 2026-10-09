@@ -2,6 +2,7 @@
 
 import { isDateKey } from './dates.js';
 import { REST_DAY_KEY, seedLibrary, seedPlan } from './program.js';
+import { FOODS, normalizeCustomFood } from './foods.js';
 import {
   SCHEMA_VERSION,
   defaultSettings,
@@ -81,10 +82,19 @@ function normalizeSettings(raw) {
           grams: Math.round(clampNonNegative(qa.grams))
         }))
     : fallback.quickAdds;
+  const seenFoods = new Set(FOODS.map((f) => f.id));
+  const customFoods = (Array.isArray(raw.customFoods) ? raw.customFoods : [])
+    .map(normalizeCustomFood)
+    .filter((f) => f && !seenFoods.has(f.id) && seenFoods.add(f.id));
+  const recentFoodIds = (Array.isArray(raw.recentFoodIds) ? raw.recentFoodIds : [])
+    .filter((id, i, all) => seenFoods.has(id) && all.indexOf(id) === i)
+    .slice(0, 8);
   return {
     proteinTargetG: target > 0 ? target : fallback.proteinTargetG,
     quickAdds,
-    activePlanId: typeof raw.activePlanId === 'string' ? raw.activePlanId : fallback.activePlanId
+    activePlanId: typeof raw.activePlanId === 'string' ? raw.activePlanId : fallback.activePlanId,
+    customFoods,
+    recentFoodIds
   };
 }
 

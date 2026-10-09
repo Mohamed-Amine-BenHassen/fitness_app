@@ -1,7 +1,18 @@
 // Protein tab: today's total against the target, editable quick-add buttons,
-// manual entry, and today's log. Calculations live in src/core/nutrition.js.
+// the food list, manual entry, and today's log. Calculations live in
+// src/core/nutrition.js and src/core/foods.js.
 
 import { dayTotal, entriesFor, progressRatio, remaining, targetOf } from '../core/nutrition.js';
+import {
+  FOODS,
+  addCustomFood,
+  foodById,
+  nextFoodId,
+  proteinFor,
+  recentFoods,
+  removeCustomFood,
+  searchFoods
+} from '../core/foods.js';
 import { card, clear, el, numberValue } from './dom.js';
 
 function formatTime(ts) {
@@ -180,6 +191,185 @@ function quickAddCard(ctx) {
   ]);
 }
 
+// ---------- food list ----------
+
+const MAX_RESULTS = 8;
+
+function foodMeta(food) {
+  return `${food.proteinPer100g} g per 100 g · 1 ${food.servingLabel} = ${food.servingG} g`;
+}
+
+function foodResults(ctx, query) {
+  const { state, actions } = ctx;
+  const searching = query.trim() !== '';
+  const recents = recentFoods(state);
+  const foods = searching ? searchFoods(state, query) : recents.length ? recents : FOODS.slice(0, MAX_RESULTS);
+
+  if (foods.length === 0) {
+    return [el('p', { class: 'empty-note' }, 'No match. Tap + Own food to add it.')];
+  }
+  return [
+    searching ? null : el('p', { class: 'meta', style: 'margin: 0 0 6px' }, recents.length ? 'Recent' : 'Common'),
+    el(
+      'ul',
+      { class: 'pick-list' },
+      foods.slice(0, MAX_RESULTS).map((food) =>
+        el('li', {}, [
+          el('button', { type: 'button', onclick: () => actions.selectFood(food.id) }, [
+            food.name,
+            el('span', { class: 'entry-time' }, ` · ${food.proteinPer100g} g/100 g`)
+          ])
+        ])
+      )
+    )
+  ];
+}
+
+function selectedFoodPanel(ctx, food) {
+  const { actions } = ctx;
+  const amount = el('input', {
+    type: 'number',
+    id: 'food-amount',
+    inputmode: 'decimal',
+    min: '0',
+    step: 'any',
+    value: '1'
+  });
+  const unit = el('select', { id: 'food-unit', autocomplete: 'off', 'aria-label': 'Unit' }, [
+    el('option', { value: 'servings' }, `× ${food.servingLabel}`),
+    el('option', { value: 'grams' }, 'grams')
+  ]);
+  const preview = el('p', { class: 'food-preview', 'aria-live': 'polite' });
+
+  const currentAmount = () => {
+    const value = numberValue(amount) ?? 0;
+    return unit.value === 'grams' ? { grams: value } : { servings: value };
+  };
+  const update = () => {
+    preview.textContent = `= ${proteinFor(food, currentAmount())} g protein`;
+  };
+  // Switching unit converts the number so the amount eaten stays the same.
+  unit.addEventListener('change', () => {
+    const value = numberValue(amount) ?? 0;
+    amount.value = unit.value === 'grams' ? Math.round(value * food.servingG) : Math.round((value / food.servingG) * 100) / 100;
+    update();
+  });
+  amount.addEventListener('input', update);
+  const submit = () => {
+    const grams = proteinFor(food, currentAmount());
+    if (grams <= 0) {
+      amount.focus();
+      actions.toast('Enter how much you ate.');
+      return;
+    }
+    actions.logFood(food.id, currentAmount());
+  };
+  amount.addEventListener('keydown', (e) => e.key === 'Enter' && submit());
+  update();
+
+  return el('div', { class: 'food-selected' }, [
+    el('div', { class: 'card-head' }, [
+      el('strong', {}, food.name),
+      el('button', { type: 'button', class: 'ghost', onclick: () => actions.selectFood(null) }, 'Change')
+    ]),
+    el('p', { class: 'meta' }, foodMeta(food)),
+    el('div', { class: 'add-row' }, [
+      el('div', { class: 'field' }, [el('label', { for: 'food-amount' }, 'Amount'), amount]),
+      el('div', { class: 'field' }, [el('label', { for: 'food-unit' }, 'Unit'), unit])
+    ]),
+    el('div', { class: 'add-row', style: 'align-items: center' }, [
+      preview,
+      el('button', { type: 'button', class: 'primary add-set', onclick: submit }, 'Add')
+    ]),
+    food.custom
+      ? el(
+          'button',
+          {
+            type: 'button',
+            class: 'ghost danger-text',
+            onclick: () => {
+              actions.change((s) => removeCustomFood(s, food.id));
+              actions.selectFood(null);
+            }
+          },
+          'Delete this food'
+        )
+      : null
+  ]);
+}
+
+function customFoodForm(ctx) {
+  const { state, actions } = ctx;
+  const name = el('input', { type: 'text', id: 'cf-name', placeholder: 'e.g. Barebells bar', autocomplete: 'off' });
+  const per100 = el('input', { type: 'number', id: 'cf-protein', inputmode: 'decimal', min: '0', step: 'any', placeholder: 'g' });
+  const servingG = el('input', { type: 'number', id: 'cf-serving', inputmode: 'decimal', min: '0', step: 'any', placeholder: '100' });
+  const servingLabel = el('input', { type: 'text', id: 'cf-label', placeholder: 'bar, scoop…', autocomplete: 'off' });
+  const field = (label, input) => el('div', { class: 'field' }, [el('label', { for: input.id }, label), input]);
+
+  const save = () => {
+    const id = nextFoodId(state);
+    const next = actions.change((s) =>
+      addCustomFood(s, {
+        id,
+        name: name.value,
+        proteinPer100g: numberValue(per100) ?? 0,
+        servingG: numberValue(servingG) ?? 0,
+        servingLabel: servingLabel.value
+      })
+    );
+    if (!foodById(next, id)) {
+      actions.toast('Give the food a name and its protein per 100 g.');
+      return;
+    }
+    actions.selectFood(id);
+  };
+
+  return el('div', { class: 'stack food-form' }, [
+    field('Name', name),
+    el('div', { class: 'add-row' }, [field('Protein per 100 g', per100), field('Serving (g)', servingG)]),
+    field('Serving name', servingLabel),
+    el('div', { class: 'button-row' }, [
+      el('button', { type: 'button', class: 'ghost', onclick: () => actions.toggleFoodForm() }, 'Cancel'),
+      el('button', { type: 'button', class: 'primary', onclick: save }, 'Save food')
+    ])
+  ]);
+}
+
+function foodCard(ctx) {
+  const { state, ui, actions } = ctx;
+  const selected = ui.food.selectedId ? foodById(state, ui.food.selectedId) : null;
+
+  if (ui.food.adding) {
+    return card(null, [el('h3', {}, 'Your own food'), customFoodForm(ctx)]);
+  }
+  if (selected) {
+    return card(null, [el('h3', {}, 'Add food'), selectedFoodPanel(ctx, selected)]);
+  }
+
+  // The result list re-renders in place as you type; the page does not.
+  const results = el('div', { class: 'food-results' }, foodResults(ctx, ''));
+  const search = el('input', {
+    type: 'search',
+    id: 'food-search',
+    placeholder: `Search ${FOODS.length}+ foods`,
+    autocomplete: 'off',
+    'aria-label': 'Search foods'
+  });
+  search.addEventListener('input', () => {
+    clear(results);
+    results.append(...foodResults(ctx, search.value).filter(Boolean));
+  });
+
+  return card(null, [
+    el('div', { class: 'card-head' }, [
+      el('h3', {}, 'Add food'),
+      el('button', { type: 'button', class: 'ghost', onclick: () => actions.toggleFoodForm() }, '+ Own food')
+    ]),
+    search,
+    results
+  ]);
+}
+
 function manualCard(ctx) {
   const { actions } = ctx;
   const gramsInput = el('input', {
@@ -255,5 +445,5 @@ function logCard(ctx) {
 
 export function renderProtein(root, ctx) {
   clear(root);
-  root.append(totalCard(ctx), quickAddCard(ctx), manualCard(ctx), logCard(ctx));
+  root.append(totalCard(ctx), quickAddCard(ctx), foodCard(ctx), manualCard(ctx), logCard(ctx));
 }

@@ -18,6 +18,9 @@ screen and keeps everything in the browser's local storage.
   did that exercise shown above the inputs. The inputs prefill from your last set.
 - **Protein counter** — a daily total against 190 g, with quick-add buttons you
   edit in the app (label and grams) plus free-text entries.
+- **Food list** — search about 50 common foods, enter grams or servings, and it
+  logs the protein. Recent foods come first; add your own (e.g. a branded bar)
+  with its protein per 100 g. Values are estimates from standard tables.
 - **Technique notes** — tap an exercise name for setup, steps, cues and common
   mistakes. Works offline.
 - **Rest timer** — *Start rest* on any exercise counts down its rest time, with

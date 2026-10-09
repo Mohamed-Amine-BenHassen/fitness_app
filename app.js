@@ -9,11 +9,13 @@ import { formatHuman, localDateKey, weekdayOf } from './src/core/dates.js';
 import { addSet, removeSet } from './src/core/sets.js';
 import {
   addEntry,
+  dayTotal,
   removeEntry,
   removeQuickAdd,
   setProteinTarget,
   upsertQuickAdd
 } from './src/core/nutrition.js';
+import { logFood } from './src/core/foods.js';
 import { renderWorkout } from './src/ui/workout.js';
 import { renderProtein } from './src/ui/protein.js';
 import { renderBackup } from './src/ui/backup-ui.js';
@@ -36,6 +38,7 @@ const ui = {
   dayKey: 'rest',
   todayDayKey: 'rest',
   editingQuickAdds: false,
+  food: { selectedId: null, adding: false },
   // Where the Plan tab is: view is list | plan | session | pick | library | exercise.
   plan: { view: 'list', planId: null, sessionKey: null, mode: null, slotIndex: null, exerciseId: null }
 };
@@ -138,6 +141,23 @@ const actions = {
 
   setTarget(grams, options) {
     commit(setProteinTarget(state, grams), options);
+  },
+
+  selectFood(foodId) {
+    ui.food = { selectedId: foodId, adding: false };
+    render();
+  },
+
+  toggleFoodForm() {
+    ui.food = { selectedId: null, adding: !ui.food.adding };
+    render();
+  },
+
+  logFood(foodId, amount) {
+    const before = dayTotal(state, ui.dateKey);
+    ui.food = { selectedId: null, adding: false };
+    commit(logFood(state, ui.dateKey, foodId, amount, Date.now()));
+    toast(`+${dayTotal(state, ui.dateKey) - before} g protein`);
   },
 
   toggleQuickAddEditor() {

@@ -3,7 +3,8 @@
 import { SEED_PLAN_ID, seedLibrary, seedPlan } from './program.js';
 
 // v2 added the exercise library and editable plans (`library`, `plans`,
-// `settings.activePlanId`). backup.js#migrate upgrades v1 data.
+// `settings.activePlanId`) and the food list (`settings.customFoods`,
+// `settings.recentFoodIds`). backup.js#migrate upgrades v1 data.
 export const SCHEMA_VERSION = 2;
 
 // plan.md leaves the quick-add gram values blank; they are edited in-app.
@@ -15,7 +16,9 @@ export function defaultSettings() {
       { id: 'qa-2', label: 'Quick add 2', grams: 0 },
       { id: 'qa-3', label: 'Quick add 3', grams: 0 }
     ],
-    activePlanId: SEED_PLAN_ID
+    activePlanId: SEED_PLAN_ID,
+    customFoods: [],
+    recentFoodIds: []
   };
 }
 
