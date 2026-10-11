@@ -138,3 +138,19 @@ test('food edits do not mutate the input state', () => {
   recordRecent(before, 'egg');
   assert.equal(JSON.stringify(before), snapshot);
 });
+
+test('the built-in list stays halal: no pork', () => {
+  const pork = /pork|ham\b|bacon|schwein|speck|leberk/i;
+  for (const f of FOODS) {
+    if (f.id === 'turkey-ham') continue; // poultry, named after the cut
+    assert.doesNotMatch(`${f.id} ${f.name} ${f.aliases}`, pork, f.id);
+  }
+});
+
+test('German names find the English entries', () => {
+  const ids = (q) => searchFoods(seed(), q).map((f) => f.id);
+  assert.ok(ids('Hähnchenbrust').includes('chicken-breast'));
+  assert.ok(ids('magerquark').includes('quark'));
+  assert.ok(ids('thunfisch').includes('tuna-can'));
+  assert.ok(ids('Putenschinken').includes('turkey-ham'));
+});
