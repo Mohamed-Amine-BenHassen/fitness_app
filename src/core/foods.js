@@ -125,9 +125,38 @@ export const FOODS = [
   food('broccoli', 'Broccoli (cooked)', 2.4, 100, 'portion', 'Brokkoli'),
   food('spinach', 'Spinach (cooked)', 3, 100, 'portion', 'Spinat'),
   // common meals (rough: recipes vary a lot)
-  food('doner', 'Döner kebab (in bread)', 9, 400, 'kebab', 'Döner Dürüm Kebab'),
+  food('doner', 'Döner kebab (in bread)', 9, 400, 'kebab', 'Döner Kebab Dönertasche'),
   food('pizza-margherita', 'Pizza margherita', 10, 350, 'pizza', 'Pizza'),
-  food('cheeseburger', 'Cheeseburger', 12.5, 120, 'burger', 'Burger Hamburger')
+  food('cheeseburger', 'Cheeseburger', 12.5, 120, 'burger', 'Burger Hamburger'),
+  // Turkish (portions are typical German takeaway sizes)
+  food('durum', 'Dürüm / Yufka döner wrap', 9, 450, 'wrap', 'Dürüm Yufka Döner Wrap Rollo'),
+  food('doner-box', 'Döner box (with fries)', 7, 400, 'box', 'Dönerbox Döner Box Pommes'),
+  food('doner-plate', 'Döner plate (with rice & salad)', 9, 500, 'plate', 'Dönerteller Döner Teller'),
+  food('doner-meat', 'Döner meat only (chicken or beef)', 20, 150, 'portion', 'Dönerfleisch Hähnchendöner Döner Fleisch'),
+  food('lahmacun', 'Lahmacun', 10, 180, 'lahmacun', 'Lahmacun türkische Pizza'),
+  food('pide', 'Pide (meat or cheese)', 11, 300, 'pide', 'Pide'),
+  food('kofte', 'Köfte (grilled)', 17, 150, 'portion', 'Köfte Frikadellen Kofte'),
+  food('adana', 'Adana kebab', 17, 150, 'skewer', 'Adana Kebab Spieß'),
+  food('borek', 'Börek (cheese or spinach)', 9, 150, 'piece', 'Börek Burek'),
+  food('menemen', 'Menemen (Turkish eggs)', 7, 250, 'pan', 'Menemen Rührei'),
+  // sushi
+  food('nigiri', 'Sushi nigiri (salmon / tuna)', 9, 38, 'piece', 'Sushi Nigiri Lachs'),
+  food('maki', 'Sushi maki (salmon / tuna)', 6, 25, 'piece', 'Sushi Maki Hosomaki'),
+  food('inside-out-roll', 'Sushi inside-out / California roll', 4.5, 30, 'piece', 'Sushi California Roll Inside Out Uramaki'),
+  food('sashimi', 'Sashimi (salmon / tuna)', 21, 15, 'slice', 'Sashimi Sushi roher Fisch'),
+  // Asian
+  food('buldak', 'Buldak ramen (Samyang, dry pack)', 9.3, 140, 'pack', 'Buldak Samyang Ramen Nudeln scharf'),
+  food('instant-noodles', 'Instant noodles (dry pack)', 9, 80, 'pack', 'Instantnudeln Ramen Nudeln Yum Yum'),
+  food('chicken-ramen', 'Chicken ramen (restaurant bowl)', 5, 600, 'bowl', 'Ramen Nudelsuppe'),
+  food('pho', 'Pho with beef or chicken', 4.5, 650, 'bowl', 'Pho Nudelsuppe'),
+  food('pad-thai', 'Pad thai with chicken', 8, 350, 'plate', 'Pad Thai gebratene Nudeln'),
+  food('bibimbap', 'Bibimbap', 6, 450, 'bowl', 'Bibimbap'),
+  food('butter-chicken', 'Butter chicken (curry only)', 12, 250, 'portion', 'Butter Chicken Curry Hähnchen'),
+  food('biryani', 'Chicken biryani', 7, 400, 'plate', 'Biryani Reis'),
+  // more takeaway
+  food('burrito', 'Burrito with chicken', 9, 350, 'burrito', 'Burrito Wrap'),
+  food('falafel-wrap', 'Falafel wrap', 6.5, 300, 'wrap', 'Falafel Dürüm Wrap'),
+  food('chicken-schnitzel', 'Chicken schnitzel, breaded', 20, 180, 'schnitzel', 'Hähnchenschnitzel Putenschnitzel paniert Schnitzel')
 ];
 
 const MAX_RECENTS = 8;

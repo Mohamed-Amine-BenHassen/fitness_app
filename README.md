@@ -63,7 +63,7 @@ version in the background and reloads itself.
 ### Protein
 - Daily total against your target (default 190 g).
 - **Quick add** buttons you set up yourself (label and grams).
-- **Food list** — 98 common foods, halal (no pork), with German names in search
+- **Food list** — 123 common foods and takeaway dishes, halal (no pork), with German names in search
   (*Hähnchenbrust*, *Magerquark*, *Thunfisch* …); search, pick, enter grams or servings, and the
   protein is logged. Recent foods come first. Add your own (e.g. a branded bar)
   with its protein per 100 g. Built-in values are estimates from standard tables.
