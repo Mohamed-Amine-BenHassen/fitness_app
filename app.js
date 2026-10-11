@@ -1,11 +1,12 @@
 // Wiring only: owns the state object, hands it to the renderers, saves on change.
 // No domain logic lives here — it belongs in src/core so node --test can reach it.
 
-import { load, loadTimer, save, saveTimer, storageBytes } from './src/data/store.js';
+import { load, loadBackupRecord, loadTimer, save, saveBackupRecord, saveTimer, storageBytes } from './src/data/store.js';
 import { adjustTimer, isStale, startTimer } from './src/core/timer.js';
 import { REST_DAY_KEY } from './src/core/program.js';
 import { activePlan, resolveSession, scheduledKey } from './src/core/plans.js';
 import { formatHuman, localDateKey, weekdayOf } from './src/core/dates.js';
+import { markBackedUp, snoozeBackup } from './src/core/backup.js';
 import { addSet, removeSet, setsFor } from './src/core/sets.js';
 import { RECORD_LABELS, recordsInSession } from './src/core/records.js';
 import {
@@ -91,6 +92,12 @@ function reconcileDay() {
 // The rest timer is outside `state`: it is per-device, never backed up, and
 // updating it must not re-render the view.
 let restTimer = loadTimer();
+let backupRecord = loadBackupRecord();
+
+function setBackupRecord(next) {
+  backupRecord = next;
+  saveBackupRecord(next);
+}
 
 const timerBar = createTimerBar(document.getElementById('timer-bar'), {
   onAdjust: (deltaSec) => setRestTimer(adjustTimer(restTimer, deltaSec, Date.now())),
@@ -195,8 +202,20 @@ const actions = {
 
   replaceState(next) {
     ui.plan.view = 'list';
+    // The data on this phone now matches a backup file, so the reminder resets.
+    setBackupRecord(markBackedUp(backupRecord, Date.now()));
     commit(next);
     toast('Backup restored.');
+  },
+
+  markBackedUp() {
+    setBackupRecord(markBackedUp(backupRecord, Date.now()));
+    render();
+  },
+
+  snoozeBackup() {
+    setBackupRecord(snoozeBackup(backupRecord, Date.now()));
+    render();
   }
 };
 
@@ -205,7 +224,7 @@ const actions = {
 // back to the top, so restore the offset unless the caller asked for a reset.
 function render({ resetScroll = false } = {}) {
   const scrollY = window.scrollY;
-  const ctx = { state, ui, actions, storageBytes };
+  const ctx = { state, ui, actions, storageBytes, backupRecord };
 
   if (ui.tab === 'workout') {
     titleEl.textContent = ui.history.view ? 'History' : resolveSession(state, ui.dayKey).name;

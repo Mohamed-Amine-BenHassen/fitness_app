@@ -8,6 +8,9 @@ import {
   backupSummary,
   buildBackup,
   migrate,
+  backupReminder,
+  markBackedUp,
+  snoozeBackup,
   parseBackup,
   serializeBackup,
   validateBackup
@@ -141,4 +144,39 @@ test('set timestamps survive a backup round trip; junk ones are dropped', () => 
     ] }]
   });
   assert.deepEqual(junk.sessions[0].entries[0].sets, [{ weightKg: 30, reps: 8 }, { weightKg: 30, reps: 8 }]);
+});
+
+const DAY = 86400000;
+const NOON = (dateKey) => new Date(`${dateKey}T12:00:00`).getTime();
+const NONE = { lastBackupAt: null, snoozedUntil: null };
+
+test('no data, no backup reminder', () => {
+  assert.equal(backupReminder(defaultState(), NONE, NOON('2026-10-12')), null);
+});
+
+test('never backed up: the reminder waits two weeks from the first logged day', () => {
+  const state = addSet(defaultState(), '2026-10-01', 'pushA', 'incline-db-press', { weightKg: 30, reps: 8 });
+  assert.equal(backupReminder(state, NONE, NOON('2026-10-12')), null);
+  assert.deepEqual(backupReminder(state, NONE, NOON('2026-10-15')), { daysSince: null });
+});
+
+test('protein and weigh-ins count as logged data too', () => {
+  const state = addEntry(defaultState(), '2026-09-01', { label: 'Shake', grams: 25 }, 0);
+  assert.deepEqual(backupReminder(state, NONE, NOON('2026-10-12')), { daysSince: null });
+});
+
+test('a recent backup silences it until it is 14 days old', () => {
+  const state = addSet(defaultState(), '2026-08-01', 'pushA', 'incline-db-press', { weightKg: 30, reps: 8 });
+  const record = markBackedUp(NONE, NOON('2026-10-01'));
+  assert.equal(backupReminder(state, record, NOON('2026-10-14')), null);
+  assert.deepEqual(backupReminder(state, record, NOON('2026-10-15')), { daysSince: 14 });
+});
+
+test('Not now snoozes for three days, and a backup clears the snooze', () => {
+  const state = addSet(defaultState(), '2026-08-01', 'pushA', 'incline-db-press', { weightKg: 30, reps: 8 });
+  const now = NOON('2026-10-12');
+  const snoozed = snoozeBackup(NONE, now);
+  assert.equal(backupReminder(state, snoozed, now + 2 * DAY), null);
+  assert.deepEqual(backupReminder(state, snoozed, now + 3 * DAY), { daysSince: null });
+  assert.equal(markBackedUp(snoozed, now).snoozedUntil, null);
 });

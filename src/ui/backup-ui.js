@@ -2,7 +2,7 @@
 // Validation and migration are pure and live in src/core/backup.js.
 
 import { backupFilename, backupSummary, parseBackup, serializeBackup } from '../core/backup.js';
-import { formatHuman } from '../core/dates.js';
+import { formatHuman, formatRelative, localDateKey } from '../core/dates.js';
 import { card, clear, el } from './dom.js';
 
 function download(filename, text) {
@@ -14,6 +14,13 @@ function download(filename, text) {
   link.remove();
   // Give the download a tick to start before revoking.
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Used by the Backup tab and by the reminder on the Workout tab.
+export function exportBackup(ctx) {
+  download(backupFilename(ctx.ui.dateKey), serializeBackup(ctx.state, new Date().toISOString()));
+  ctx.actions.markBackedUp();
+  ctx.actions.toast('Backup downloaded.');
 }
 
 function stat(term, value) {
@@ -42,6 +49,12 @@ function summaryCard(ctx) {
   ]);
 }
 
+function lastBackupText(ctx) {
+  const at = ctx.backupRecord.lastBackupAt;
+  if (!at) return 'No backup from this phone yet.';
+  return `Last backup: ${formatRelative(localDateKey(new Date(at)), ctx.ui.dateKey)}.`;
+}
+
 function exportCard(ctx) {
   return card(null, [
     el('h3', {}, 'Export'),
@@ -50,19 +63,14 @@ function exportCard(ctx) {
       { class: 'empty-note' },
       'Downloads every session, protein entry and setting as a single JSON file.'
     ),
+    el('p', { class: 'meta' }, lastBackupText(ctx)),
     el(
       'button',
       {
         type: 'button',
         class: 'primary wide',
         style: 'margin-top: 12px',
-        onclick: () => {
-          download(
-            backupFilename(ctx.ui.dateKey),
-            serializeBackup(ctx.state, new Date().toISOString())
-          );
-          ctx.actions.toast('Backup downloaded.');
-        }
+        onclick: () => exportBackup(ctx)
       },
       'Export backup'
     )

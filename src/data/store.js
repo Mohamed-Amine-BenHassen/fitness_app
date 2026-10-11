@@ -68,3 +68,27 @@ export function clear() {
     console.error('Clear failed.', error);
   }
 }
+
+// When this phone last exported (or imported) a backup, and any snooze on the
+// reminder. Per-device and left out of backups, like the rest timer.
+export const BACKUP_RECORD_KEY = 'ppl-tracker-backup';
+
+export function loadBackupRecord() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(BACKUP_RECORD_KEY) || '{}');
+    const ms = (value) => (Number.isFinite(value) && value > 0 ? value : null);
+    return { lastBackupAt: ms(raw?.lastBackupAt), snoozedUntil: ms(raw?.snoozedUntil) };
+  } catch (error) {
+    console.warn('Could not read the backup record.', error);
+    return { lastBackupAt: null, snoozedUntil: null };
+  }
+}
+
+export function saveBackupRecord(record) {
+  try {
+    localStorage.setItem(BACKUP_RECORD_KEY, JSON.stringify(record));
+  } catch (error) {
+    // Worst case the reminder shows again; nothing is lost.
+    console.warn('Could not save the backup record.', error);
+  }
+}

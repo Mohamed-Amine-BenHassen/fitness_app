@@ -8,6 +8,8 @@ import { findSession, formatSet, formatSets, lastPerformance, sessionTiming, set
 import { RECORD_LABELS, compareSets, recordsInSession } from '../core/records.js';
 import { suggestNext, warmupSets, weightStepOf } from '../core/progression.js';
 import { deloadAdvice, stallFor } from '../core/stalls.js';
+import { backupReminder } from '../core/backup.js';
+import { exportBackup } from './backup-ui.js';
 import { sessionId } from '../core/schema.js';
 import { card, clear, el, numberValue } from './dom.js';
 import { openTechnique } from './technique.js';
@@ -106,6 +108,21 @@ function stallLine(exercise, ctx) {
       ? 'Instead of the target above, take an easier session on this one, then build back up.'
       : `Instead of the target above, try about 10% lighter (${stall.lighterKg} kg) and build back up.`;
   return el('p', { class: 'stall' }, [el('strong', {}, `Stalled for ${stall.sessions} sessions. `), advice]);
+}
+
+// Everything lives on this phone only, so nudge for an export now and then.
+function backupCard(ctx) {
+  const due = backupReminder(ctx.state, ctx.backupRecord, Date.now());
+  if (!due) return null;
+  const when = due.daysSince === null ? 'You haven’t backed up yet.' : `Your last backup was ${due.daysSince} days ago.`;
+  return card('reminder', [
+    el('h3', {}, 'Back up your data'),
+    el('p', {}, `${when} Everything is stored only on this phone, so one lost or reset phone loses it all.`),
+    el('div', { class: 'button-row' }, [
+      el('button', { type: 'button', class: 'primary', onclick: () => exportBackup(ctx) }, 'Back up now'),
+      el('button', { type: 'button', class: 'ghost', onclick: () => ctx.actions.snoozeBackup() }, 'Not now')
+    ])
+  ]);
 }
 
 // Several stalled lifts at once: suggest a lighter week rather than one-off fixes.
@@ -319,6 +336,8 @@ export function renderWorkout(root, ctx) {
   clear(root);
   root.dataset.session = key;
   root.append(sessionPicker(ctx));
+  const reminder = backupCard(ctx);
+  if (reminder) root.append(reminder);
 
   const session = resolveSession(ctx.state, ctx.ui.dayKey);
   if (session.exercises.length === 0) {

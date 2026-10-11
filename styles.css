@@ -199,6 +199,8 @@ body::after {
 .card.deload h3 { color: var(--accent); }
 .card.deload p { margin: 0; }
 .card.deload p + p { margin-top: 8px; }
+.card.reminder h3 { color: var(--text); }
+.card.reminder p { margin: 0; color: var(--muted); font-size: 0.92rem; }
 .last.empty { font-style: italic; }
 
 /* Exercise name opens the technique dialog; looks like a heading, dotted to hint it's tappable. */

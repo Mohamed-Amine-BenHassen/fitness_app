@@ -75,6 +75,11 @@ version in the background and reloads itself.
 ### Backup
 - **Export** everything to a JSON file; **import** it on any device. Import
   replaces all data after a confirmation.
+- **Backup reminder** — a card on the Workout tab when the last export from
+  this phone is 14+ days old (or, never having exported, 14 days after the first
+  thing you logged). *Back up now* downloads the file right there; *Not now*
+  hides it for 3 days. Importing a backup also counts. Kept per device, like the
+  rest timer, and not part of backups.
 
 Out of scope by design: charts, accounts, sync, notifications.
 

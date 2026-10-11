@@ -1,6 +1,6 @@
 // JSON backup: build, parse, validate, migrate. Pure module.
 
-import { isDateKey } from './dates.js';
+import { isDateKey, parseDateKey } from './dates.js';
 import { REST_DAY_KEY, seedLibrary, seedPlan } from './program.js';
 import { FOODS, normalizeCustomFood } from './foods.js';
 import { isPlausibleWeight } from './bodyweight.js';
@@ -283,4 +283,39 @@ export function backupSummary(state) {
     nutritionDays,
     weighIns: Object.keys(state.bodyweight).length
   };
+}
+
+// Backup reminder. The record is per-device ({ lastBackupAt, snoozedUntil }, epoch
+// ms) and never part of a backup. With no export yet, the clock starts at the
+// first day anything was logged, so a brand-new user isn't nagged on day one.
+export const BACKUP_REMIND_DAYS = 14;
+export const BACKUP_SNOOZE_DAYS = 3;
+const DAY_MS = 86400000;
+
+function firstLoggedDay(state) {
+  const keys = [
+    ...state.sessions.map((s) => s.dateKey),
+    ...Object.keys(state.nutrition),
+    ...Object.keys(state.bodyweight)
+  ].sort();
+  return keys.length ? keys[0] : null;
+}
+
+// null when no reminder is due, else { daysSince } — null daysSince means never.
+export function backupReminder(state, record, now) {
+  const first = firstLoggedDay(state);
+  if (!first) return null;
+  if (record?.snoozedUntil && now < record.snoozedUntil) return null;
+  const last = Number.isFinite(record?.lastBackupAt) ? record.lastBackupAt : null;
+  const since = last ?? parseDateKey(first).getTime();
+  if (now - since < BACKUP_REMIND_DAYS * DAY_MS) return null;
+  return { daysSince: last === null ? null : Math.floor((now - last) / DAY_MS) };
+}
+
+export function markBackedUp(record, now) {
+  return { ...record, lastBackupAt: now, snoozedUntil: null };
+}
+
+export function snoozeBackup(record, now) {
+  return { ...record, snoozedUntil: now + BACKUP_SNOOZE_DAYS * DAY_MS };
 }
