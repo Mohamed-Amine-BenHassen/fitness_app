@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   daysBetween,
+  formatDuration,
   formatHuman,
   formatRelative,
   isDateKey,
@@ -52,4 +53,11 @@ test('human and relative formatting', () => {
   assert.equal(formatRelative('2026-09-10', '2026-09-11'), 'yesterday');
   assert.equal(formatRelative('2026-09-07', '2026-09-11'), '4 days ago');
   assert.equal(formatRelative('2026-08-01', '2026-09-11'), 'Sat 1 Aug');
+});
+
+test('durations read as minutes, then hours and minutes', () => {
+  assert.equal(formatDuration(0), '0 min');
+  assert.equal(formatDuration(45), '45 min');
+  assert.equal(formatDuration(60), '1 h');
+  assert.equal(formatDuration(72), '1 h 12 min');
 });

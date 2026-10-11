@@ -122,7 +122,7 @@ const actions = {
   },
 
   addSet(exerciseId, set) {
-    commit(addSet(state, ui.dateKey, ui.dayKey, exerciseId, set));
+    commit(addSet(state, ui.dateKey, ui.dayKey, exerciseId, set, Date.now()));
     const sets = setsFor(state, ui.dateKey, ui.dayKey, exerciseId);
     const current = { dateKey: ui.dateKey, dayKey: ui.dayKey };
     const record = recordsInSession(state, exerciseId, current, sets).at(-1);

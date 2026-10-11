@@ -35,6 +35,9 @@ version in the background and reloads itself.
   / Skip. It vibrates and beeps at zero and keeps the screen on while it runs.
 - **Technique notes** — tap an exercise name for muscles worked, setup, steps,
   cues and common mistakes (all 31 built-in exercises, plus your own notes).
+- **Session time** — each set records when it was logged, so the workout shows
+  when you started and how long you've been going (first set to latest), and
+  History shows each session's length. Sessions logged before this have no time.
 - **History** — past sessions newest first, each session's sets with its PRs,
   and each exercise across time with its all-time bests. Read-only.
 
@@ -72,7 +75,7 @@ Out of scope by design: charts, accounts, sync, notifications.
 
 - Everything lives in this browser on this phone. Clearing the browser's site
   data deletes it, so **export a backup now and then**.
-- Data carries a schema version (currently **3**). Older data and older backups
+- Data carries a schema version (currently **4**). Older data and older backups
   are upgraded automatically on load or import, and history is never rewritten.
   A backup from a *newer* version of the app is refused rather than half-read.
 - The rest timer is kept per device and is not part of backups.

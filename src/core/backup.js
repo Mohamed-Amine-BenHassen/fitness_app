@@ -240,6 +240,8 @@ function normalizeBodyweight(raw) {
 // plan, whose session keys (pushA … legsB) match the keys v1 history was logged
 // under. Sessions and nutrition are untouched.
 // v2 → v3: adds an empty `bodyweight` and the default weight step.
+// v3 → v4: sets may carry `ts`. Older sets keep none, so their sessions simply
+// show no duration.
 export function migrate(data) {
   if (!isPlainObject(data)) return defaultState();
   const library = normalizeLibrary(data.library);

@@ -5,8 +5,9 @@ import { SEED_PLAN_ID, seedLibrary, seedPlan } from './program.js';
 // v2 added the exercise library and editable plans (`library`, `plans`,
 // `settings.activePlanId`) and the food list (`settings.customFoods`,
 // `settings.recentFoodIds`). v3 added `bodyweight` (kg by date) and
-// `settings.weightStepKg`. backup.js#migrate upgrades older data.
-export const SCHEMA_VERSION = 3;
+// `settings.weightStepKg`. v4 added `ts` (when it was logged) to each set.
+// backup.js#migrate upgrades older data.
+export const SCHEMA_VERSION = 4;
 
 // plan.md leaves the quick-add gram values blank; they are edited in-app.
 export function defaultSettings() {
@@ -56,7 +57,10 @@ export function roundWeight(value) {
 export function normalizeSet(raw) {
   const weight = isFiniteNumber(raw?.weightKg) && raw.weightKg > 0 ? roundWeight(raw.weightKg) : null;
   const reps = Math.max(0, Math.round(clampNonNegative(raw?.reps)));
-  return { weightKg: weight, reps };
+  // When the set was logged, in epoch ms. Sets from before v4 have none, and
+  // stay without the key rather than carrying a fake time.
+  const ts = isFiniteNumber(raw?.ts) && raw.ts > 0 ? Math.round(raw.ts) : null;
+  return ts === null ? { weightKg: weight, reps } : { weightKg: weight, reps, ts };
 }
 
 const MAX_SETS = 20;

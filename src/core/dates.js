@@ -36,6 +36,20 @@ export function daysBetween(fromKey, toKey) {
   return Math.round(ms / 86400000);
 }
 
+// "45 min", "1 h", "1 h 12 min".
+export function formatDuration(minutes) {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest ? `${hours} h ${rest} min` : `${hours} h`;
+}
+
+// Wall-clock time of a timestamp in the phone's own format, e.g. "18:02".
+export function formatClockTime(ts) {
+  if (!ts) return '';
+  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 export function formatHuman(key) {
   const date = parseDateKey(key);
   return `${WEEKDAY_NAMES[date.getDay()]} ${date.getDate()} ${MONTH_NAMES[date.getMonth()]}`;

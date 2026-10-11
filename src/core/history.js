@@ -3,6 +3,7 @@
 
 import { sessionName } from './plans.js';
 import { bestsOf, recordsInSession } from './records.js';
+import { sessionTiming } from './sets.js';
 
 function exerciseName(state, exerciseId) {
   return state.library[exerciseId]?.name || exerciseId;
@@ -29,7 +30,8 @@ export function sessionSummaries(state) {
         name: sessionName(state, session.dayKey),
         exerciseCount: session.entries.length,
         setCount: session.entries.reduce((n, e) => n + e.sets.length, 0),
-        prCount
+        prCount,
+        minutes: sessionTiming(session)?.minutes ?? null
       };
     });
 }
@@ -37,10 +39,13 @@ export function sessionSummaries(state) {
 export function sessionDetail(state, dateKey, dayKey) {
   const session = state.sessions.find((s) => s.dateKey === dateKey && s.dayKey === dayKey);
   if (!session) return null;
+  const timing = sessionTiming(session);
   return {
     dateKey,
     dayKey,
     name: sessionName(state, dayKey),
+    startedAt: timing?.startedAt ?? null,
+    minutes: timing?.minutes ?? null,
     exercises: session.entries.map((entry) => ({
       id: entry.exerciseId,
       name: exerciseName(state, entry.exerciseId),

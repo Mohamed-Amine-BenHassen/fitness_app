@@ -13,12 +13,8 @@ import {
   removeCustomFood,
   searchFoods
 } from '../core/foods.js';
+import { formatClockTime } from '../core/dates.js';
 import { card, clear, el, numberValue } from './dom.js';
-
-function formatTime(ts) {
-  if (!ts) return '';
-  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
 
 function totalCard(ctx) {
   const { state, ui } = ctx;
@@ -424,7 +420,7 @@ function logCard(ctx) {
             el('li', { class: 'entry-row' }, [
               el('span', { class: 'entry-label' }, [
                 entry.label,
-                entry.ts ? el('span', { class: 'entry-time' }, ` · ${formatTime(entry.ts)}`) : null
+                entry.ts ? el('span', { class: 'entry-time' }, ` · ${formatClockTime(entry.ts)}`) : null
               ]),
               el('span', { class: 'entry-grams' }, `${entry.grams} g`),
               el(

@@ -3,7 +3,7 @@
 
 import { exerciseLog, sessionDetail, sessionSummaries } from '../core/history.js';
 import { RECORD_LABELS } from '../core/records.js';
-import { formatHuman, formatRelative } from '../core/dates.js';
+import { formatClockTime, formatDuration, formatHuman, formatRelative } from '../core/dates.js';
 import { formatSet } from '../core/sets.js';
 import { card, clear, el } from './dom.js';
 
@@ -56,6 +56,7 @@ function renderList(root, ctx) {
               el('span', { class: 'history-name' }, s.name),
               el('span', { class: 'meta' }, [
                 `${plural(s.exerciseCount, 'exercise')} · ${plural(s.setCount, 'set')}`,
+                s.minutes ? ` · ${formatDuration(s.minutes)}` : null,
                 s.prCount ? el('span', { class: 'note' }, ` · 🏆 ${s.prCount}`) : null
               ])
             ]
@@ -66,6 +67,14 @@ function renderList(root, ctx) {
   );
 }
 
+// "Sat 10 Oct · started 18:02 · 52 min"; sessions logged before v4 show the date only.
+function sessionWhen(detail) {
+  const parts = [formatHuman(detail.dateKey)];
+  if (detail.startedAt) parts.push(`started ${formatClockTime(detail.startedAt)}`);
+  if (detail.minutes) parts.push(formatDuration(detail.minutes));
+  return parts.join(' · ');
+}
+
 function renderSession(root, ctx) {
   const { state, ui, actions } = ctx;
   const detail = sessionDetail(state, ui.history.dateKey, ui.history.dayKey);
@@ -73,7 +82,7 @@ function renderSession(root, ctx) {
 
   root.append(
     backButton('History', () => actions.historyNav({ view: 'list' })),
-    card(null, [el('h2', {}, detail.name), el('p', { class: 'meta' }, formatHuman(detail.dateKey))]),
+    card(null, [el('h2', {}, detail.name), el('p', { class: 'meta' }, sessionWhen(detail))]),
     ...detail.exercises.map((exercise) =>
       card(null, [
         el('h2', {}, [

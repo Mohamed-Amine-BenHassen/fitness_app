@@ -8,6 +8,7 @@ import {
   lastPerformance,
   loggedSetCount,
   removeSet,
+  sessionTiming,
   setsFor,
   updateSet
 } from '../src/core/sets.js';
@@ -111,4 +112,49 @@ test('formatting a reference line', () => {
   assert.equal(formatSets([{ weightKg: 32.5, reps: 9 }, { weightKg: 30, reps: 8 }]), '32.5 kg x 9, 30 kg x 8');
   assert.equal(formatSets([{ weightKg: null, reps: 14 }, { weightKg: null, reps: 12 }]), '14, 12 reps');
   assert.equal(formatSets([]), '');
+});
+
+const MIN = 60000;
+const T0 = new Date(2026, 9, 12, 18, 2).getTime();
+
+test('a set logged with a time keeps it; one without stays untimed', () => {
+  let state = addSet(seed(), '2026-10-12', 'pushA', 'incline-db-press', { weightKg: 30, reps: 8 }, T0);
+  state = addSet(state, '2026-10-12', 'pushA', 'incline-db-press', { weightKg: 30, reps: 8 });
+  assert.deepEqual(setsFor(state, '2026-10-12', 'pushA', 'incline-db-press'), [
+    { weightKg: 30, reps: 8, ts: T0 },
+    { weightKg: 30, reps: 8 }
+  ]);
+});
+
+test('editing a set keeps when it was logged', () => {
+  let state = addSet(seed(), '2026-10-12', 'pushA', 'incline-db-press', { weightKg: 30, reps: 8 }, T0);
+  state = updateSet(state, '2026-10-12', 'pushA', 'incline-db-press', 0, { weightKg: 32.5, reps: 8, ts: T0 + 99 * MIN });
+  assert.deepEqual(setsFor(state, '2026-10-12', 'pushA', 'incline-db-press'), [{ weightKg: 32.5, reps: 8, ts: T0 }]);
+});
+
+test('session timing runs from the first set to the last, across exercises', () => {
+  let state = seed();
+  state = addSet(state, '2026-10-12', 'pushA', 'triceps-pushdown', { weightKg: 25, reps: 12 }, T0 + 34 * MIN);
+  state = addSet(state, '2026-10-12', 'pushA', 'incline-db-press', { weightKg: 30, reps: 8 }, T0);
+  assert.deepEqual(sessionTiming(findSession(state, '2026-10-12', 'pushA')), { startedAt: T0, minutes: 34 });
+});
+
+test('one timed set has a start but no duration yet', () => {
+  const state = addSet(seed(), '2026-10-12', 'pushA', 'incline-db-press', { weightKg: 30, reps: 8 }, T0);
+  assert.deepEqual(sessionTiming(findSession(state, '2026-10-12', 'pushA')), { startedAt: T0, minutes: null });
+});
+
+test('untimed sets are ignored, and a session with none has no timing', () => {
+  let state = addSet(seed(), '2026-10-12', 'pushA', 'incline-db-press', { weightKg: 30, reps: 8 });
+  assert.equal(sessionTiming(findSession(state, '2026-10-12', 'pushA')), null);
+  state = addSet(state, '2026-10-12', 'pushA', 'incline-db-press', { weightKg: 30, reps: 8 }, T0);
+  state = addSet(state, '2026-10-12', 'pushA', 'incline-db-press', { weightKg: 30, reps: 7 }, T0 + 5 * MIN);
+  assert.equal(sessionTiming(findSession(state, '2026-10-12', 'pushA')).minutes, 5);
+  assert.equal(sessionTiming(null), null);
+});
+
+test('a span over five hours is two sittings, so it gets no duration', () => {
+  let state = addSet(seed(), '2026-10-12', 'pushA', 'incline-db-press', { weightKg: 30, reps: 8 }, T0);
+  state = addSet(state, '2026-10-12', 'pushA', 'incline-db-press', { weightKg: 30, reps: 8 }, T0 + 301 * MIN);
+  assert.deepEqual(sessionTiming(findSession(state, '2026-10-12', 'pushA')), { startedAt: T0, minutes: null });
 });

@@ -42,16 +42,20 @@ function entryFor(session, exerciseId) {
   return entry;
 }
 
-export function addSet(state, dateKey, dayKey, exerciseId, set) {
+// `ts` is when the set was logged; it drives the session's duration.
+export function addSet(state, dateKey, dayKey, exerciseId, set, ts) {
   return withSession(state, dateKey, dayKey, (session) => {
-    entryFor(session, exerciseId).sets.push(normalizeSet(set));
+    entryFor(session, exerciseId).sets.push(normalizeSet(ts === undefined ? set : { ...set, ts }));
   });
 }
 
 export function updateSet(state, dateKey, dayKey, exerciseId, index, set) {
   return withSession(state, dateKey, dayKey, (session) => {
     const entry = entryFor(session, exerciseId);
-    if (index >= 0 && index < entry.sets.length) entry.sets[index] = normalizeSet(set);
+    // Fixing a typo doesn't move the set in time: keep when it was logged.
+    if (index >= 0 && index < entry.sets.length) {
+      entry.sets[index] = normalizeSet({ ...set, ts: entry.sets[index].ts });
+    }
   });
 }
 
@@ -93,6 +97,23 @@ export function formatSets(sets, bodyweightOnly = false) {
     return `${sets.map((s) => s.reps).join(', ')} reps`;
   }
   return sets.map((s) => formatSet(s)).join(', ');
+}
+
+// A session runs from its first logged set to its last. A span over five hours
+// means two sittings were logged into one session, so it gets no duration.
+const MAX_SESSION_MS = 5 * 60 * 60 * 1000;
+
+// { startedAt, minutes } from the sets' timestamps, or null when none have one.
+// `minutes` is null until there are two timestamped sets.
+export function sessionTiming(session) {
+  const stamps = (session?.entries ?? [])
+    .flatMap((entry) => entry.sets.map((set) => set.ts))
+    .filter((ts) => Number.isFinite(ts));
+  if (stamps.length === 0) return null;
+  const startedAt = Math.min(...stamps);
+  const span = Math.max(...stamps) - startedAt;
+  const minutes = stamps.length > 1 && span <= MAX_SESSION_MS ? Math.round(span / 60000) : null;
+  return { startedAt, minutes };
 }
 
 export function loggedSetCount(state, dateKey, dayKey) {

@@ -3,8 +3,8 @@
 
 import { formatPrescription, formatRest } from '../core/program.js';
 import { activePlan, liveSessions, resolveSession, sessionName } from '../core/plans.js';
-import { formatRelative } from '../core/dates.js';
-import { formatSet, formatSets, lastPerformance, setsFor } from '../core/sets.js';
+import { formatClockTime, formatDuration, formatRelative } from '../core/dates.js';
+import { findSession, formatSet, formatSets, lastPerformance, sessionTiming, setsFor } from '../core/sets.js';
 import { RECORD_LABELS, compareSets, recordsInSession } from '../core/records.js';
 import { suggestNext } from '../core/progression.js';
 import { sessionId } from '../core/schema.js';
@@ -43,8 +43,19 @@ function sessionPicker(ctx) {
     el('div', { class: 'picker-row' }, [
       select,
       el('button', { type: 'button', onclick: () => actions.historyNav({ view: 'list' }) }, 'History')
-    ])
+    ]),
+    sessionClock(ctx)
   ]);
+}
+
+// "Started 18:02 · 34 min", from the first set to the latest. Hidden until a set is logged.
+function sessionClock(ctx) {
+  const { state, ui } = ctx;
+  const timing = sessionTiming(findSession(state, ui.dateKey, ui.dayKey));
+  if (!timing) return null;
+  const text = [`Started ${formatClockTime(timing.startedAt)}`];
+  if (timing.minutes) text.push(formatDuration(timing.minutes));
+  return el('p', { class: 'meta session-clock' }, text.join(' · '));
 }
 
 function restCard(ctx) {

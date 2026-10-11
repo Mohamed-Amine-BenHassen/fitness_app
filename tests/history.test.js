@@ -20,10 +20,21 @@ function sample() {
 
 test('the session list is newest first with counts and PRs', () => {
   assert.deepEqual(sessionSummaries(sample()), [
-    { dateKey: '2026-09-10', dayKey: 'pushB', name: 'Push B', exerciseCount: 1, setCount: 2, prCount: 2 },
-    { dateKey: '2026-09-09', dayKey: 'legsA', name: 'Legs A', exerciseCount: 1, setCount: 1, prCount: 0 },
-    { dateKey: '2026-09-07', dayKey: 'pushA', name: 'Push A', exerciseCount: 2, setCount: 2, prCount: 0 }
+    { dateKey: '2026-09-10', dayKey: 'pushB', name: 'Push B', exerciseCount: 1, setCount: 2, prCount: 2, minutes: null },
+    { dateKey: '2026-09-09', dayKey: 'legsA', name: 'Legs A', exerciseCount: 1, setCount: 1, prCount: 0, minutes: null },
+    { dateKey: '2026-09-07', dayKey: 'pushA', name: 'Push A', exerciseCount: 2, setCount: 2, prCount: 0, minutes: null }
   ]);
+});
+
+test('timed sessions carry their duration into the list and the detail', () => {
+  const start = new Date(2026, 8, 12, 18, 2).getTime();
+  let state = defaultState();
+  state = addSet(state, '2026-09-12', 'pushA', 'incline-db-press', { weightKg: 30, reps: 8 }, start);
+  state = addSet(state, '2026-09-12', 'pushA', 'triceps-pushdown', { weightKg: 25, reps: 12 }, start + 52 * 60000);
+  assert.equal(sessionSummaries(state)[0].minutes, 52);
+  const detail = sessionDetail(state, '2026-09-12', 'pushA');
+  assert.equal(detail.startedAt, start);
+  assert.equal(detail.minutes, 52);
 });
 
 test('an empty log has no sessions', () => {

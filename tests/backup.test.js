@@ -126,3 +126,19 @@ test('summary counts what the backup screen shows', () => {
     weighIns: 0
   });
 });
+
+test('set timestamps survive a backup round trip; junk ones are dropped', () => {
+  const ts = new Date(2026, 9, 12, 18, 2).getTime();
+  let state = addSet(defaultState(), '2026-10-12', 'pushA', 'incline-db-press', { weightKg: 30, reps: 8 }, ts);
+  const restored = parseBackup(serializeBackup(state, '2026-10-12T18:00:00.000Z'));
+  assert.equal(restored.ok, true);
+  assert.deepEqual(restored.state.sessions[0].entries[0].sets, [{ weightKg: 30, reps: 8, ts }]);
+
+  const junk = migrate({
+    schemaVersion: 3,
+    sessions: [{ dateKey: '2026-10-12', dayKey: 'pushA', entries: [
+      { exerciseId: 'incline-db-press', sets: [{ weightKg: 30, reps: 8, ts: 'yesterday' }, { weightKg: 30, reps: 8, ts: -5 }] }
+    ] }]
+  });
+  assert.deepEqual(junk.sessions[0].entries[0].sets, [{ weightKg: 30, reps: 8 }, { weightKg: 30, reps: 8 }]);
+});
