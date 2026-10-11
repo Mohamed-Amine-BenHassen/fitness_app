@@ -66,6 +66,11 @@ version in the background and reloads itself.
 - **Food list** — 53 common foods; search, pick, enter grams or servings, and the
   protein is logged. Recent foods come first. Add your own (e.g. a branded bar)
   with its protein per 100 g. Built-in values are estimates from standard tables.
+- **Estimate from a photo** — through the AI app you already use (Gemini or
+  Claude): *Copy prompt*, send it there with your meal photo, paste the one-line
+  answer back. A review sheet lists each food with editable protein; nothing is
+  logged until you tap *Log*. The tracker itself makes no network call and needs
+  no API key.
 - Free-text entries, and today's log.
 
 ### Body

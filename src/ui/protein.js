@@ -14,6 +14,7 @@ import {
   searchFoods
 } from '../core/foods.js';
 import { formatClockTime } from '../core/dates.js';
+import { PHOTO_PROMPT, parseEstimate } from '../core/estimate.js';
 import { card, clear, el, numberValue } from './dom.js';
 
 function totalCard(ctx) {
@@ -33,6 +34,157 @@ function totalCard(ctx) {
     ),
     el('div', { class: 'bar', role: 'img', 'aria-label': `${total} of ${target} grams` }, [
       el('div', { class: done ? 'done' : null, style: `transform: scaleX(${ratio})` })
+    ])
+  ]);
+}
+
+// Photo → protein, through the user's own Gemini or Claude app: copy the prompt,
+// send it there with the photo, paste the one-line answer back, review, log.
+async function copyPrompt(ctx, fallback) {
+  try {
+    await navigator.clipboard.writeText(PHOTO_PROMPT);
+    ctx.actions.toast('Prompt copied. Now add your photo in the AI app.');
+  } catch {
+    fallback.open = true;
+    ctx.actions.toast('Couldn’t copy. Copy the prompt from the box below.');
+  }
+}
+
+function photoCard(ctx) {
+  const { actions } = ctx;
+  const answer = el('textarea', {
+    id: 'estimate-answer',
+    rows: 3,
+    placeholder: 'Paste the answer here (it starts with PROTEIN:)'
+  });
+  const error = el('p', { class: 'errors', hidden: true });
+
+  const read = () => {
+    const result = parseEstimate(answer.value);
+    if (!result.ok) {
+      error.textContent = result.error;
+      error.hidden = false;
+      return;
+    }
+    actions.setEstimate({
+      skipped: result.skipped,
+      items: result.items.map((item) => ({ ...item, include: item.protein > 0 }))
+    });
+  };
+
+  const pasteButton =
+    navigator.clipboard && typeof navigator.clipboard.readText === 'function'
+      ? el(
+          'button',
+          {
+            type: 'button',
+            class: 'ghost',
+            onclick: async () => {
+              try {
+                answer.value = await navigator.clipboard.readText();
+                read();
+              } catch {
+                actions.toast('Long-press the box and choose Paste.');
+              }
+            }
+          },
+          'Paste'
+        )
+      : null;
+
+  const fallback = el('details', { class: 'prompt-box' }, [
+    el('summary', {}, 'Show prompt'),
+    el('textarea', { readonly: true, rows: 7, value: PHOTO_PROMPT, onfocus: (event) => event.target.select() })
+  ]);
+
+  return card('photo', [
+    el('h3', {}, 'Estimate from a photo'),
+    el('ol', { class: 'steps-mini' }, [
+      el('li', {}, 'Copy the prompt.'),
+      el('li', {}, 'In Gemini or Claude, attach your meal photo and paste it.'),
+      el('li', {}, 'Copy the answer and paste it below.')
+    ]),
+    el('div', { class: 'button-row' }, [
+      el('button', { type: 'button', class: 'primary', onclick: () => copyPrompt(ctx, fallback) }, 'Copy prompt'),
+      el('a', { class: 'link-button', href: 'https://gemini.google.com/app', target: '_blank', rel: 'noopener' }, 'Open Gemini ↗'),
+      el('a', { class: 'link-button', href: 'https://claude.ai/new', target: '_blank', rel: 'noopener' }, 'Open Claude ↗')
+    ]),
+    fallback,
+    el('div', { class: 'field', style: 'margin-top: 14px' }, [el('label', { for: answer.id }, 'Answer'), answer]),
+    error,
+    el('div', { class: 'button-row' }, [
+      pasteButton,
+      el('button', { type: 'button', onclick: read }, 'Read answer')
+    ])
+  ]);
+}
+
+// The estimate is a starting point: every number can be changed, every food
+// unticked, and nothing is logged until Log is tapped.
+function reviewCard(ctx) {
+  const { actions } = ctx;
+  const estimate = ctx.ui.estimate;
+  const totalOf = () =>
+    estimate.items.reduce((sum, item) => sum + (item.include && item.protein > 0 ? item.protein : 0), 0);
+  const logButton = el('button', { type: 'button', class: 'primary' });
+  const paintTotal = () => {
+    const total = totalOf();
+    logButton.textContent = `Log ${total} g`;
+    logButton.disabled = total === 0;
+  };
+
+  const rows = estimate.items.map((item, index) => {
+    const box = el('input', { type: 'checkbox', id: `estimate-include-${index}`, checked: item.include });
+    const grams = el('input', {
+      type: 'number',
+      id: `estimate-protein-${index}`,
+      inputmode: 'numeric',
+      min: '0',
+      step: '1',
+      value: String(item.protein),
+      'aria-label': `Protein in ${item.name}, grams`
+    });
+    box.addEventListener('change', () => {
+      item.include = box.checked;
+      paintTotal();
+    });
+    grams.addEventListener('input', () => {
+      item.protein = Math.max(0, Math.round(numberValue(grams) ?? 0));
+      paintTotal();
+    });
+    return el('li', { class: 'estimate-row' }, [
+      box,
+      el('label', { for: box.id, class: 'estimate-name' }, [
+        item.name,
+        item.grams ? el('span', { class: 'entry-time' }, ` · ~${item.grams} g`) : null
+      ]),
+      grams,
+      el('span', { class: 'estimate-unit' }, 'g')
+    ]);
+  });
+
+  logButton.addEventListener('click', () => {
+    const entries = estimate.items
+      .filter((item) => item.include && item.protein > 0)
+      .map((item) => ({ label: `Photo · ${item.name}`, grams: item.protein }));
+    if (entries.length > 0) actions.logEstimate(entries);
+  });
+  paintTotal();
+
+  return card('photo', [
+    el('h3', {}, 'Check the estimate'),
+    el(
+      'p',
+      { class: 'meta', style: 'margin: 0 0 10px' },
+      'AI estimates from a photo can be well off. Fix anything that looks wrong, untick what you didn’t eat.'
+    ),
+    estimate.skipped
+      ? el('p', { class: 'meta', style: 'margin: 0 0 10px' }, `${estimate.skipped} line(s) in the answer couldn’t be read and were left out.`)
+      : null,
+    el('ul', { class: 'estimate-list' }, rows),
+    el('div', { class: 'button-row' }, [
+      logButton,
+      el('button', { type: 'button', class: 'ghost', onclick: () => actions.setEstimate(null) }, 'Cancel')
     ])
   ]);
 }
@@ -441,5 +593,12 @@ function logCard(ctx) {
 
 export function renderProtein(root, ctx) {
   clear(root);
-  root.append(totalCard(ctx), quickAddCard(ctx), foodCard(ctx), manualCard(ctx), logCard(ctx));
+  root.append(
+    totalCard(ctx),
+    quickAddCard(ctx),
+    ctx.ui.estimate ? reviewCard(ctx) : photoCard(ctx),
+    foodCard(ctx),
+    manualCard(ctx),
+    logCard(ctx)
+  );
 }

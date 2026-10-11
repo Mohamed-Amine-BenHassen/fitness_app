@@ -44,6 +44,8 @@ const ui = {
   todayDayKey: 'rest',
   editingQuickAdds: false,
   food: { selectedId: null, adding: false },
+  // Photo estimate under review on the Protein tab: null | { items, skipped }.
+  estimate: null,
   // History inside the Workout tab: view is null (closed) | list | session | exercise.
   history: { view: null, dateKey: null, dayKey: null, exerciseId: null, from: null },
   // Where the Plan tab is: view is list | plan | session | pick | library | exercise.
@@ -168,6 +170,19 @@ const actions = {
   toggleFoodForm() {
     ui.food = { selectedId: null, adding: !ui.food.adding };
     render();
+  },
+
+  setEstimate(estimate) {
+    ui.estimate = estimate;
+    render();
+  },
+
+  logEstimate(entries) {
+    const before = dayTotal(state, ui.dateKey);
+    const now = Date.now();
+    ui.estimate = null;
+    commit(entries.reduce((next, entry) => addEntry(next, ui.dateKey, entry, now), state));
+    toast(`+${dayTotal(state, ui.dateKey) - before} g protein`);
   },
 
   logFood(foodId, amount) {
