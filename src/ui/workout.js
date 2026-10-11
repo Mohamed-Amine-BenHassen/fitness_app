@@ -7,6 +7,7 @@ import { formatClockTime, formatDuration, formatRelative } from '../core/dates.j
 import { findSession, formatSet, formatSets, lastPerformance, sessionTiming, setsFor } from '../core/sets.js';
 import { RECORD_LABELS, compareSets, recordsInSession } from '../core/records.js';
 import { suggestNext, warmupSets, weightStepOf } from '../core/progression.js';
+import { deloadAdvice, stallFor } from '../core/stalls.js';
 import { sessionId } from '../core/schema.js';
 import { card, clear, el, numberValue } from './dom.js';
 import { openTechnique } from './technique.js';
@@ -94,6 +95,36 @@ function nextLine(exercise, ctx) {
 }
 
 const TREND = { up: ['▲', 'better than last time'], same: ['=', 'same as last time'], down: ['▼', 'below last time'] };
+
+// No progress over the last few sessions: suggest backing off to build up again.
+function stallLine(exercise, ctx) {
+  const { state, ui } = ctx;
+  const stall = stallFor(state, exercise, { dateKey: ui.dateKey, dayKey: ui.dayKey });
+  if (!stall) return null;
+  const advice =
+    stall.lighterKg === null
+      ? 'Instead of the target above, take an easier session on this one, then build back up.'
+      : `Instead of the target above, try about 10% lighter (${stall.lighterKg} kg) and build back up.`;
+  return el('p', { class: 'stall' }, [el('strong', {}, `Stalled for ${stall.sessions} sessions. `), advice]);
+}
+
+// Several stalled lifts at once: suggest a lighter week rather than one-off fixes.
+function deloadCard(ctx) {
+  const { state, ui } = ctx;
+  const advice = deloadAdvice(state, { dateKey: ui.dateKey, dayKey: ui.dayKey });
+  if (!advice) return null;
+  const names = advice.lifts.map((lift) => lift.name);
+  const listed = names.length > 3 ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more` : names.join(', ');
+  return card('deload', [
+    el('h3', {}, 'Time for a deload week?'),
+    el('p', {}, `${advice.lifts.length} lifts have stalled: ${listed}.`),
+    el(
+      'p',
+      { class: 'meta' },
+      'When several lifts stop moving at once, it’s usually fatigue. A lighter week often restarts progress: same exercises, about half the sets, about 10% lighter. Then back to normal.'
+    )
+  ]);
+}
 
 // Anchor lifts only, and only until the first working set of the day is logged.
 function warmupLine(exercise, ctx) {
@@ -253,6 +284,7 @@ function exerciseCard(exercise, ctx) {
     ]),
     lastLine(exercise, ctx),
     nextLine(exercise, ctx),
+    stallLine(exercise, ctx),
     warmupLine(exercise, ctx),
     loggedSets(exercise, ctx),
     addRow(exercise, ctx),
@@ -294,6 +326,8 @@ export function renderWorkout(root, ctx) {
     return;
   }
 
+  const deload = deloadCard(ctx);
+  if (deload) root.append(deload);
   for (const exercise of session.exercises) {
     root.append(exerciseCard(exercise, ctx));
   }

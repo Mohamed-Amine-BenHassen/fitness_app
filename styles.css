@@ -191,6 +191,14 @@ body::after {
 .next strong { color: var(--accent); font-weight: 600; }
 .warmup { margin: 4px 0 0; padding: 0 12px; font-size: 0.83rem; color: var(--muted); }
 .warmup strong { color: var(--text); font-weight: 600; }
+.stall { margin: 8px 0 0; padding: 10px 12px; border-radius: var(--radius-sm); background: rgba(255, 107, 107, 0.06); box-shadow: inset 0 0 0 1px rgba(255, 107, 107, 0.2); font-size: 0.83rem; color: var(--muted); }
+.stall strong { color: #ffb4b4; font-weight: 600; }
+
+/* Deload advice: the one card that should catch the eye before the exercises. */
+.card.deload { box-shadow: var(--tray), inset 0 0 0 1px rgba(255, 176, 32, 0.35), var(--lip); }
+.card.deload h3 { color: var(--accent); }
+.card.deload p { margin: 0; }
+.card.deload p + p { margin-top: 8px; }
 .last.empty { font-style: italic; }
 
 /* Exercise name opens the technique dialog; looks like a heading, dotted to hint it's tappable. */

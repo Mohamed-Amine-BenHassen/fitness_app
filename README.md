@@ -34,6 +34,10 @@ version in the background and reloads itself.
   weight, best estimated 1RM (Epley, up to 12 reps), or most reps at that weight
   or heavier. ▲ / = / ▼ compares each set with the same set last time (weight
   first, then reps). Your first session of an exercise is the baseline.
+- **Stalls and deloads** — an exercise whose best estimated 1RM (best reps for
+  bodyweight) hasn't improved in 3 sessions shows a suggestion to go about 10%
+  lighter and build back up. When 3 or more lifts in the active plan stall at
+  once, a card above the exercises suggests a deload week. Advice only.
 - **Rest timer** — *Start rest* counts down that exercise's rest, with −15 / +15
   / Skip. It vibrates and beeps at zero and keeps the screen on while it runs.
 - **Technique notes** — tap an exercise name for muscles worked, setup, steps,
