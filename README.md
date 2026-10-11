@@ -27,6 +27,9 @@ version in the background and reloads itself.
   add one weight step and drop to the bottom of the range; below the range →
   same weight; otherwise one more rep. The step is one setting for everything
   (default 2.5 kg, on the Plan tab).
+- **Warm-up sets** — on anchor exercises, before the first working set: about
+  40 / 60 / 80% of today's target for 8 / 5 / 3 reps, rounded to the weight
+  step. Shown only, never logged, so they don't affect records or targets.
 - **Personal records** — 🏆 on a set that beats everything before it: heaviest
   weight, best estimated 1RM (Epley, up to 12 reps), or most reps at that weight
   or heavier. ▲ / = / ▼ compares each set with the same set last time (weight

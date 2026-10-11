@@ -50,3 +50,26 @@ export function suggestNext(state, exercise, current) {
   }
   return { weightKg: top, reps: Math.min(max, lowest + 1), reason: 'Same weight, one more rep' };
 }
+
+// Ramp-up before the working weight: about 40%, 60% and 80% of it for 8, 5 and
+// 3 reps, rounded to the weight step. Light ones that round to nothing, repeats,
+// and anything at or above the target are dropped. Never logged, so warm-ups
+// can't touch records or progression.
+const WARMUP_RAMP = [
+  [0.4, 8],
+  [0.6, 5],
+  [0.8, 3]
+];
+
+export function warmupSets(targetKg, stepKg = DEFAULT_WEIGHT_STEP_KG) {
+  if (!Number.isFinite(targetKg) || targetKg <= 0) return [];
+  const step = Number.isFinite(stepKg) && stepKg > 0 ? stepKg : DEFAULT_WEIGHT_STEP_KG;
+  const sets = [];
+  for (const [share, reps] of WARMUP_RAMP) {
+    const weightKg = roundWeight(Math.round((targetKg * share) / step) * step);
+    if (weightKg <= 0 || weightKg >= targetKg) continue;
+    if (sets.some((set) => set.weightKg === weightKg)) continue;
+    sets.push({ weightKg, reps });
+  }
+  return sets;
+}

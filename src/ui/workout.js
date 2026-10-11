@@ -6,7 +6,7 @@ import { activePlan, liveSessions, resolveSession, sessionName } from '../core/p
 import { formatClockTime, formatDuration, formatRelative } from '../core/dates.js';
 import { findSession, formatSet, formatSets, lastPerformance, sessionTiming, setsFor } from '../core/sets.js';
 import { RECORD_LABELS, compareSets, recordsInSession } from '../core/records.js';
-import { suggestNext } from '../core/progression.js';
+import { suggestNext, warmupSets, weightStepOf } from '../core/progression.js';
 import { sessionId } from '../core/schema.js';
 import { card, clear, el, numberValue } from './dom.js';
 import { openTechnique } from './technique.js';
@@ -94,6 +94,20 @@ function nextLine(exercise, ctx) {
 }
 
 const TREND = { up: ['▲', 'better than last time'], same: ['=', 'same as last time'], down: ['▼', 'below last time'] };
+
+// Anchor lifts only, and only until the first working set of the day is logged.
+function warmupLine(exercise, ctx) {
+  if (!exercise.anchor || exercise.bodyweightOnly) return null;
+  const { state, ui } = ctx;
+  if (setsFor(state, ui.dateKey, ui.dayKey, exercise.id).length > 0) return null;
+  const next = suggestNext(state, exercise, { dateKey: ui.dateKey, dayKey: ui.dayKey });
+  const sets = warmupSets(next?.weightKg, weightStepOf(state));
+  if (sets.length === 0) return null;
+  return el('p', { class: 'warmup' }, [
+    el('strong', {}, 'Warm-up: '),
+    sets.map((set) => `${set.weightKg} kg × ${set.reps}`).join(' · ')
+  ]);
+}
 
 function loggedSets(exercise, ctx) {
   const { state, ui, actions } = ctx;
@@ -239,6 +253,7 @@ function exerciseCard(exercise, ctx) {
     ]),
     lastLine(exercise, ctx),
     nextLine(exercise, ctx),
+    warmupLine(exercise, ctx),
     loggedSets(exercise, ctx),
     addRow(exercise, ctx),
     el(
