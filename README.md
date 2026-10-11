@@ -123,6 +123,8 @@ src/core/                          pure logic, no DOM — what the tests cover
   techniques.js  dates.js          technique notes; local-date helpers
 src/data/store.js                  the only module that touches localStorage
 src/ui/                            one renderer per tab or screen, plus dom.js helpers
+fonts/                             Geist + Geist Mono (OFL), bundled so text renders offline
+about/                             landing page (/about/); screenshots use example data
 tests/                             node --test (core modules, plus the offline-cache check)
 tools/                             dev server and icon generator
 ```

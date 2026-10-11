@@ -36,7 +36,7 @@ function totalCard(ctx) {
       done ? 'Target hit.' : `${left} g to go`
     ),
     el('div', { class: 'bar', role: 'img', 'aria-label': `${total} of ${target} grams` }, [
-      el('div', { class: done ? 'done' : null, style: `width: ${Math.round(ratio * 100)}%` })
+      el('div', { class: done ? 'done' : null, style: `transform: scaleX(${ratio})` })
     ])
   ]);
 }

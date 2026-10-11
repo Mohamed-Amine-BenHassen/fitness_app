@@ -104,7 +104,7 @@ export function createTimerBar(root, { onAdjust, onSkip, onDone }) {
     if (!timer) return;
     const now = Date.now();
     clock.textContent = formatClock(remainingMs(timer, now));
-    fill.style.width = `${remainingRatio(timer, now) * 100}%`;
+    fill.style.transform = `scaleX(${remainingRatio(timer, now)})`;
     if (!isDone(timer, now)) return;
 
     stopTicking();

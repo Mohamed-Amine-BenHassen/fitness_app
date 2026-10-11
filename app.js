@@ -30,6 +30,7 @@ const titleEl = document.getElementById('app-title');
 const dateEl = document.getElementById('app-date');
 const toastEl = document.getElementById('toast');
 const tabs = [...document.querySelectorAll('.tab')];
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 const TITLES = { plan: 'Plan', protein: 'Protein', body: 'Body', backup: 'Backup' };
 
@@ -224,6 +225,22 @@ function render({ resetScroll = false } = {}) {
   else renderBackup(view, ctx);
 
   window.scrollTo(0, resetScroll ? 0 : scrollY);
+  if (resetScroll) enterView();
+}
+
+// A new page settles in card by card. Only on navigation: logging a set also
+// re-renders, and the cards must not replay their entrance on every tap.
+function enterView() {
+  if (reducedMotion.matches || !view.animate) return;
+  [...view.children].slice(0, 8).forEach((child, index) => {
+    child.animate(
+      [
+        { opacity: 0, transform: 'translateY(28px)' },
+        { opacity: 1, transform: 'none' }
+      ],
+      { duration: 800, delay: index * 60, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'backwards' }
+    );
+  });
 }
 
 for (const tab of tabs) {
@@ -247,6 +264,7 @@ document.addEventListener('visibilitychange', () => {
 
 syncToday();
 render();
+enterView();
 
 // A rest that ended while the app was closed: alert if it was recent,
 // otherwise drop it quietly.

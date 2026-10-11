@@ -1,7 +1,7 @@
 // Cache-first app shell. Bump CACHE_NAME on EVERY change to a precached file,
 // or the installed app keeps serving the old bundle.
 
-const CACHE_NAME = 'ppl-v11';
+const CACHE_NAME = 'ppl-v13';
 
 const ASSETS = [
   './',
@@ -33,6 +33,8 @@ const ASSETS = [
   './src/ui/plan.js',
   './src/ui/history.js',
   './src/ui/body.js',
+  './fonts/Geist-Variable.woff2',
+  './fonts/GeistMono-Variable.woff2',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png'
@@ -59,7 +61,9 @@ self.addEventListener('fetch', (event) => {
   if (new URL(request.url).origin !== self.location.origin) return;
 
   // Navigations: serve the shell so a deep link or refresh works offline.
-  if (request.mode === 'navigate') {
+  // The landing page under about/ is its own document, so it falls through to
+  // the cache-then-network path below instead.
+  if (request.mode === 'navigate' && !new URL(request.url).pathname.includes('/about/')) {
     event.respondWith(
       caches.match('./index.html').then((cached) => cached || fetch(request))
     );
