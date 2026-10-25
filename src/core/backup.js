@@ -4,6 +4,7 @@ import { isDateKey, parseDateKey } from './dates.js';
 import { REST_DAY_KEY, seedLibrary, seedPlan } from './program.js';
 import { FOODS, normalizeCustomFood } from './foods.js';
 import { isPlausibleWeight } from './bodyweight.js';
+import { isPlausibleCalories, normalizeGoal, normalizeProfile } from './energy.js';
 import {
   SCHEMA_VERSION,
   defaultSettings,
@@ -29,7 +30,8 @@ export function buildBackup(state, exportedAt) {
     plans: state.plans,
     sessions: state.sessions,
     nutrition: state.nutrition,
-    bodyweight: state.bodyweight
+    bodyweight: state.bodyweight,
+    calories: state.calories
   };
 }
 
@@ -72,6 +74,9 @@ export function validateBackup(data) {
   if (data.bodyweight !== undefined && !isPlainObject(data.bodyweight)) {
     errors.push('"bodyweight" must be an object keyed by date.');
   }
+  if (data.calories !== undefined && !isPlainObject(data.calories)) {
+    errors.push('"calories" must be an object keyed by date.');
+  }
   return { ok: errors.length === 0, errors };
 }
 
@@ -102,7 +107,9 @@ function normalizeSettings(raw) {
     activePlanId: typeof raw.activePlanId === 'string' ? raw.activePlanId : fallback.activePlanId,
     customFoods,
     recentFoodIds,
-    weightStepKg: step >= 0.25 && step <= 50 ? step : fallback.weightStepKg
+    weightStepKg: step >= 0.25 && step <= 50 ? step : fallback.weightStepKg,
+    profile: normalizeProfile(raw.profile),
+    goal: normalizeGoal(raw.goal)
   };
 }
 
@@ -233,6 +240,15 @@ function normalizeBodyweight(raw) {
   return out;
 }
 
+function normalizeCalories(raw) {
+  if (!isPlainObject(raw)) return {};
+  const out = {};
+  for (const [dateKey, kcal] of Object.entries(raw)) {
+    if (isDateKey(dateKey) && isPlausibleCalories(kcal)) out[dateKey] = Math.round(kcal);
+  }
+  return out;
+}
+
 // Coerces any accepted backup (or a stored blob from an older schema) into the
 // current state shape. Add a case here whenever SCHEMA_VERSION is bumped.
 //
@@ -242,6 +258,7 @@ function normalizeBodyweight(raw) {
 // v2 → v3: adds an empty `bodyweight` and the default weight step.
 // v3 → v4: sets may carry `ts`. Older sets keep none, so their sessions simply
 // show no duration.
+// v4 → v5: adds an empty `calories`, no `settings.profile` and no `settings.goal`.
 export function migrate(data) {
   if (!isPlainObject(data)) return defaultState();
   const library = normalizeLibrary(data.library);
@@ -256,7 +273,8 @@ export function migrate(data) {
     plans,
     sessions: normalizeSessions(data.sessions),
     nutrition: normalizeNutrition(data.nutrition),
-    bodyweight: normalizeBodyweight(data.bodyweight)
+    bodyweight: normalizeBodyweight(data.bodyweight),
+    calories: normalizeCalories(data.calories)
   };
 }
 
@@ -281,7 +299,8 @@ export function backupSummary(state) {
     firstDate: sessions.length ? sessions[0].dateKey : null,
     lastDate: sessions.length ? sessions[sessions.length - 1].dateKey : null,
     nutritionDays,
-    weighIns: Object.keys(state.bodyweight).length
+    weighIns: Object.keys(state.bodyweight).length,
+    calorieDays: Object.keys(state.calories).length
   };
 }
 
@@ -296,7 +315,8 @@ function firstLoggedDay(state) {
   const keys = [
     ...state.sessions.map((s) => s.dateKey),
     ...Object.keys(state.nutrition),
-    ...Object.keys(state.bodyweight)
+    ...Object.keys(state.bodyweight),
+    ...Object.keys(state.calories)
   ].sort();
   return keys.length ? keys[0] : null;
 }

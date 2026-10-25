@@ -649,6 +649,8 @@ button.primary.wide:active::after { transform: translate(2px, -1px) scale(1.06);
 .prompt-box { margin-top: 10px; }
 .prompt-box summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; }
 .prompt-box textarea { margin-top: 8px; font-size: 0.8rem; }
+.profile-details summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; }
+.profile-details .field { min-width: 0; }
 p.errors { margin-top: 10px; }
 
 .estimate-list { list-style: none; margin: 0; padding: 0; }

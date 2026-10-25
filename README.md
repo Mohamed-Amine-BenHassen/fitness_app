@@ -81,6 +81,24 @@ version in the background and reloads itself.
 ### Body
 - One weigh-in a day (logging again replaces it), with the latest weight, 7-day
   average, change against the previous 7 days, and your protein target in g/kg.
+- **Estimated burn (TDEE)** — log the day's calorie total and, after two weeks
+  (10+ days of calories, 3+ weigh-ins spread over a week), the card shows what
+  you burn per day with a likely range. Over the last 4 weeks it takes your
+  average logged intake and corrects it by your weight trend (a least-squares
+  line through the weigh-ins): weight lost counts as 7700 kcal/kg, weight gained
+  as 5000 kcal/kg. The range (~80%) narrows as data builds up. Days after your
+  last weigh-in wait for the next one. Untracked days are skipped, not guessed.
+- **Starting estimate** — fill in *Your details* (sex, height, birth year,
+  activity) and a formula estimate (Mifflin-St Jeor × activity factor) shows
+  from the first weigh-in. Once the log has enough data the two are blended,
+  each weighted by how certain it is, so the formula fades out as your own
+  numbers firm up — there is no jump at day 14.
+- **Goal: Cut / Maintain / Bulk** — sets a daily calorie target from the burn
+  estimate. Rates scale with body weight: a cut aims to lose 0.5% of body weight
+  a week (× 7700 kcal/kg), a lean bulk to gain 0.25% a week (× 5000 kcal/kg),
+  maintain eats the burn. A cut is capped at 25% below the burn, a bulk at 15%
+  above. Once the log has enough data it says whether your weight is moving
+  as planned (within 0.2 kg a week).
 
 ### Backup
 - **Export** everything to a JSON file; **import** it on any device. Import
@@ -97,7 +115,7 @@ Out of scope by design: charts, accounts, sync, notifications.
 
 - Everything lives in this browser on this phone. Clearing the browser's site
   data deletes it, so **export a backup now and then**.
-- Data carries a schema version (currently **4**). Older data and older backups
+- Data carries a schema version (currently **5**). Older data and older backups
   are upgraded automatically on load or import, and history is never rewritten.
   A backup from a *newer* version of the app is refused rather than half-read.
 - The rest timer is kept per device and is not part of backups.
@@ -107,7 +125,7 @@ Out of scope by design: charts, accounts, sync, notifications.
 No dependencies and no build step — plain ES modules.
 
 ```bash
-node --test              # 150 tests
+node --test              # 209 tests
 node tools/serve.mjs     # http://localhost:8080
 ```
 
@@ -145,6 +163,7 @@ src/core/                          pure logic, no DOM — what the tests cover
   progression.js  history.js       next-target suggestions; read-only history
   nutrition.js  foods.js           protein entries, quick adds; food list
   bodyweight.js  timer.js          weigh-ins and averages; rest timer maths
+  energy.js                        daily calories; expenditure (TDEE) estimate
   techniques.js  dates.js          technique notes; local-date helpers
 src/data/store.js                  the only module that touches localStorage
 src/ui/                            one renderer per tab or screen, plus dom.js helpers

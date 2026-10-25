@@ -5,9 +5,11 @@ import { SEED_PLAN_ID, seedLibrary, seedPlan } from './program.js';
 // v2 added the exercise library and editable plans (`library`, `plans`,
 // `settings.activePlanId`) and the food list (`settings.customFoods`,
 // `settings.recentFoodIds`). v3 added `bodyweight` (kg by date) and
-// `settings.weightStepKg`. v4 added `ts` (when it was logged) to each set.
-// backup.js#migrate upgrades older data.
-export const SCHEMA_VERSION = 4;
+// `settings.weightStepKg`. v4 added `ts` (when it was logged) to each set. v5
+// added `calories` (kcal eaten by date) and `settings.profile` (sex, height,
+// birth year, activity — for the starting TDEE estimate) and `settings.goal`
+// (cut, maintain or bulk). backup.js#migrate upgrades older data.
+export const SCHEMA_VERSION = 5;
 
 // plan.md leaves the quick-add gram values blank; they are edited in-app.
 export function defaultSettings() {
@@ -21,7 +23,9 @@ export function defaultSettings() {
     activePlanId: SEED_PLAN_ID,
     customFoods: [],
     recentFoodIds: [],
-    weightStepKg: 2.5
+    weightStepKg: 2.5,
+    profile: null,
+    goal: null
   };
 }
 
@@ -33,7 +37,8 @@ export function defaultState() {
     plans: [seedPlan()],
     sessions: [],
     nutrition: {},
-    bodyweight: {}
+    bodyweight: {},
+    calories: {}
   };
 }
 
