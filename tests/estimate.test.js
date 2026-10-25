@@ -3,9 +3,23 @@ import assert from 'node:assert/strict';
 import { PHOTO_PROMPT, parseEstimate } from '../src/core/estimate.js';
 
 test('the prompt asks for the exact line the parser reads', () => {
-  assert.match(PHOTO_PROMPT, /PROTEIN: <food>, <portion in grams> g, <protein in grams> g/);
+  assert.match(PHOTO_PROMPT, /FOOD: <food>, <portion> g, <kcal> kcal, <protein> g protein, <fat> g fat, <carbs> g carbs/);
   const example = PHOTO_PROMPT.split('\n').find((line) => line.startsWith('Example: '));
-  assert.equal(parseEstimate(example.replace('Example: ', '')).ok, true);
+  assert.deepEqual(parseEstimate(example.replace('Example: ', '')).items, [
+    { name: 'grilled chicken breast', grams: 150, protein: 46, kcal: 248, fat: 5, carbs: 0 },
+    { name: 'white rice', grams: 200, protein: 5, kcal: 260, fat: 1, carbs: 56 }
+  ]);
+});
+
+test('labelled macros are read in any order and in short forms', () => {
+  const result = parseEstimate('FOOD: döner, wrap, 450 g, P 40 g, 950 kcal, C: 90 g, F: 45 g');
+  assert.deepEqual(result.items, [{ name: 'döner, wrap', grams: 450, protein: 40, kcal: 950, fat: 45, carbs: 90 }]);
+  // Calories without the rest still count; missing fat and carbs are 0.
+  assert.deepEqual(parseEstimate('FOOD: cola, 330 g, 139 kcal').items, [
+    { name: 'cola', grams: 330, protein: 0, kcal: 139, fat: 0, carbs: 0 }
+  ]);
+  // Impossible numbers are skipped like any unreadable item.
+  assert.equal(parseEstimate('FOOD: cake, 100 g, 90000 kcal, 5 g protein').ok, false);
 });
 
 test('a clean one-line answer becomes one item per food', () => {
@@ -71,6 +85,6 @@ test('an answer with no food in it is an error, not an empty log', () => {
   for (const text of ['', 'I can’t see any food in this photo.', 'PROTEIN: none']) {
     const result = parseEstimate(text);
     assert.equal(result.ok, false);
-    assert.match(result.error, /PROTEIN:/);
+    assert.match(result.error, /FOOD:/);
   }
 });

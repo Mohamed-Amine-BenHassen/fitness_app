@@ -11,7 +11,7 @@ import { addSet, removeSet, setsFor } from './src/core/sets.js';
 import { RECORD_LABELS, recordsInSession } from './src/core/records.js';
 import {
   addEntry,
-  dayTotal,
+  dayMacros,
   removeEntry,
   removeQuickAdd,
   setProteinTarget,
@@ -33,7 +33,14 @@ const toastEl = document.getElementById('toast');
 const tabs = [...document.querySelectorAll('.tab')];
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-const TITLES = { plan: 'Plan', protein: 'Protein', body: 'Body', backup: 'Backup' };
+const TITLES = { plan: 'Plan', protein: 'Food', body: 'Body', backup: 'Backup' };
+
+// "+46 g protein · +248 kcal" from the day's macros before and after logging.
+function addedText(before, after) {
+  const protein = `+${after.protein - before.protein} g protein`;
+  const kcal = (after.kcal ?? 0) - (before.kcal ?? 0);
+  return kcal > 0 ? `${protein} · +${kcal} kcal` : protein;
+}
 
 let state = load();
 
@@ -178,18 +185,18 @@ const actions = {
   },
 
   logEstimate(entries) {
-    const before = dayTotal(state, ui.dateKey);
+    const before = dayMacros(state, ui.dateKey);
     const now = Date.now();
     ui.estimate = null;
     commit(entries.reduce((next, entry) => addEntry(next, ui.dateKey, entry, now), state));
-    toast(`+${dayTotal(state, ui.dateKey) - before} g protein`);
+    toast(addedText(before, dayMacros(state, ui.dateKey)));
   },
 
   logFood(foodId, amount) {
-    const before = dayTotal(state, ui.dateKey);
+    const before = dayMacros(state, ui.dateKey);
     ui.food = { selectedId: null, adding: false };
     commit(logFood(state, ui.dateKey, foodId, amount, Date.now()));
-    toast(`+${dayTotal(state, ui.dateKey) - before} g protein`);
+    toast(addedText(before, dayMacros(state, ui.dateKey)));
   },
 
   toggleQuickAddEditor() {

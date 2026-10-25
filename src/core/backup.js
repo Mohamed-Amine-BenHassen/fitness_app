@@ -5,6 +5,8 @@ import { REST_DAY_KEY, seedLibrary, seedPlan } from './program.js';
 import { FOODS, normalizeCustomFood } from './foods.js';
 import { isPlausibleWeight } from './bodyweight.js';
 import { isPlausibleCalories, normalizeGoal, normalizeProfile } from './energy.js';
+import { normalizeEntry } from './nutrition.js';
+import { normalizeCheckIn, normalizeSplit } from './targets.js';
 import {
   SCHEMA_VERSION,
   defaultSettings,
@@ -31,7 +33,8 @@ export function buildBackup(state, exportedAt) {
     sessions: state.sessions,
     nutrition: state.nutrition,
     bodyweight: state.bodyweight,
-    calories: state.calories
+    calories: state.calories,
+    checkIns: state.checkIns
   };
 }
 
@@ -77,6 +80,9 @@ export function validateBackup(data) {
   if (data.calories !== undefined && !isPlainObject(data.calories)) {
     errors.push('"calories" must be an object keyed by date.');
   }
+  if (data.checkIns !== undefined && !Array.isArray(data.checkIns)) {
+    errors.push('"checkIns" must be an array.');
+  }
   return { ok: errors.length === 0, errors };
 }
 
@@ -109,7 +115,8 @@ function normalizeSettings(raw) {
     recentFoodIds,
     weightStepKg: step >= 0.25 && step <= 50 ? step : fallback.weightStepKg,
     profile: normalizeProfile(raw.profile),
-    goal: normalizeGoal(raw.goal)
+    goal: normalizeGoal(raw.goal),
+    calorieSplit: normalizeSplit(raw.calorieSplit)
   };
 }
 
@@ -219,12 +226,8 @@ function normalizeNutrition(raw) {
     if (!isDateKey(dateKey) || !Array.isArray(entries)) continue;
     const clean = entries
       .filter(isPlainObject)
-      .map((e) => ({
-        label: String(e.label || 'Protein').trim() || 'Protein',
-        grams: Math.round(clampNonNegative(e.grams)),
-        ts: Number.isFinite(e.ts) ? e.ts : 0
-      }))
-      .filter((e) => e.grams > 0);
+      .map((e) => normalizeEntry(e, e.ts))
+      .filter(Boolean);
     if (clean.length > 0) out[dateKey] = clean;
   }
   return out;
@@ -259,6 +262,9 @@ function normalizeCalories(raw) {
 // v3 → v4: sets may carry `ts`. Older sets keep none, so their sessions simply
 // show no duration.
 // v4 → v5: adds an empty `calories`, no `settings.profile` and no `settings.goal`.
+// v5 → v6: food-log entries and custom foods may carry kcal, fat and carbs.
+// Older ones keep protein only, and simply count no calories. Adds empty
+// `checkIns` and an even `settings.calorieSplit`.
 export function migrate(data) {
   if (!isPlainObject(data)) return defaultState();
   const library = normalizeLibrary(data.library);
@@ -274,8 +280,17 @@ export function migrate(data) {
     sessions: normalizeSessions(data.sessions),
     nutrition: normalizeNutrition(data.nutrition),
     bodyweight: normalizeBodyweight(data.bodyweight),
-    calories: normalizeCalories(data.calories)
+    calories: normalizeCalories(data.calories),
+    checkIns: normalizeCheckIns(data.checkIns)
   };
+}
+
+// Oldest first, one per day (the later wins).
+function normalizeCheckIns(raw) {
+  if (!Array.isArray(raw)) return [];
+  const byDate = new Map();
+  for (const checkIn of raw.map(normalizeCheckIn).filter(Boolean)) byDate.set(checkIn.dateKey, checkIn);
+  return [...byDate.values()].sort((a, b) => (a.dateKey < b.dateKey ? -1 : 1));
 }
 
 export function parseBackup(text) {

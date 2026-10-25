@@ -8,8 +8,10 @@ import { SEED_PLAN_ID, seedLibrary, seedPlan } from './program.js';
 // `settings.weightStepKg`. v4 added `ts` (when it was logged) to each set. v5
 // added `calories` (kcal eaten by date) and `settings.profile` (sex, height,
 // birth year, activity — for the starting TDEE estimate) and `settings.goal`
-// (cut, maintain or bulk). backup.js#migrate upgrades older data.
-export const SCHEMA_VERSION = 5;
+// (cut, maintain or bulk). v6 let food-log entries and custom foods carry kcal,
+// fat and carbs, and added `checkIns` (weekly calorie targets) and
+// `settings.calorieSplit`. backup.js#migrate upgrades older data.
+export const SCHEMA_VERSION = 6;
 
 // plan.md leaves the quick-add gram values blank; they are edited in-app.
 export function defaultSettings() {
@@ -25,7 +27,8 @@ export function defaultSettings() {
     recentFoodIds: [],
     weightStepKg: 2.5,
     profile: null,
-    goal: null
+    goal: null,
+    calorieSplit: 'even'
   };
 }
 
@@ -38,7 +41,8 @@ export function defaultState() {
     sessions: [],
     nutrition: {},
     bodyweight: {},
-    calories: {}
+    calories: {},
+    checkIns: []
   };
 }
 

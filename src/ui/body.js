@@ -9,7 +9,9 @@ import {
   logWeight,
   proteinPerKg,
   removeWeight,
-  weeklyChange,
+  trendOn,
+  trendSeries,
+  trendWeeklyChange,
   weighIns
 } from '../core/bodyweight.js';
 import { formatHuman, formatRelative } from '../core/dates.js';
@@ -26,9 +28,20 @@ import {
   logCalories,
   normalizeGoal,
   normalizeProfile,
+  removeCalories,
   setGoal,
   setProfile
 } from '../core/energy.js';
+import { dayMacros } from '../core/nutrition.js';
+import {
+  MAX_CHECK_IN_STEP,
+  SPLITS,
+  applyCheckIn,
+  checkInDue,
+  dailyTargets,
+  proposeCheckIn,
+  setSplit
+} from '../core/targets.js';
 import { card, clear, el, numberValue } from './dom.js';
 
 const LOG_LIMIT = 30;
@@ -85,25 +98,30 @@ function trendCard(ctx) {
     return card(null, [el('h3', {}, 'Trend'), el('p', { class: 'empty-note' }, 'Log a few weigh-ins to see your trend.')]);
   }
   const average = averageOver(state, ui.dateKey, 7);
-  const change = weeklyChange(state, ui.dateKey);
+  const trend = trendOn(state, ui.dateKey);
+  const change = trendWeeklyChange(state, ui.dateKey);
   const perKg = proteinPerKg(state);
   // Neutral on purpose: whether gaining or losing is good depends on your goal.
-  const changeText = change === null ? '—' : `${change > 0 ? '+' : ''}${change} kg`;
+  const changeText = change === null ? '—' : `${signedKg(change)} / week`;
+  const gap = trend ? Math.round((latest.kg - trend.trendKg) * 10) / 10 : 0;
 
   return card(null, [
     el('h3', {}, 'Trend'),
     el('dl', { class: 'stat-grid' }, [
       stat('Latest', `${latest.kg} kg`),
+      stat('Trend weight', trend ? `${trend.trendKg.toFixed(1)} kg` : '—'),
+      stat('Trend change', changeText),
       stat('7-day average', average === null ? '—' : `${average} kg`),
-      stat('vs last week', changeText),
       stat('Protein target', perKg === null ? '—' : `${perKg} g/kg`)
     ]),
     el(
       'p',
       { class: 'meta', style: 'margin-top: 8px' },
       change === null
-        ? 'The weekly change needs a weigh-in in each of the last two weeks.'
-        : 'Averages smooth out day-to-day swings from water and food.'
+        ? 'The trend change needs weigh-ins at least a week apart.'
+        : Math.abs(gap) >= 0.5
+          ? `Today’s scale is ${signedKg(gap)} off the trend — mostly water and food in the gut, not fat.`
+          : 'The trend smooths out day-to-day swings from water and food.'
     )
   ]);
 }
@@ -157,22 +175,98 @@ function goalBlock(ctx, estimate) {
       )
     )
   );
-  const latest = latestWeight(state);
-  if (!goal || !latest) {
+  // Rates scale with the trend weight, so a water spike doesn't move the target.
+  const trend = trendOn(state, ctx.ui.dateKey);
+  const today = dailyTargets(state, ctx.ui.dateKey);
+  if (!goal || !trend || !today) {
     return el('div', { style: 'margin-top: 12px' }, [
       buttons,
       el('p', { class: 'meta', style: 'margin-top: 8px' }, 'Pick a goal for a daily calorie target.')
     ]);
   }
-  const target = calorieTarget(estimate.kcal, goal, latest.kg);
+  const target = calorieTarget(estimate.kcal, goal, trend.trendKg);
   const change =
     target.delta === 0
       ? 'Eat your burn to hold your weight.'
-      : `${target.delta > 0 ? '+' : '−'}${Math.abs(target.delta).toLocaleString()} kcal vs your burn, for about ${signedKg(target.weeklyChangeKg)} a week.`;
+      : `Aiming ${target.delta > 0 ? '+' : '−'}${Math.abs(target.delta).toLocaleString()} kcal vs your burn, for about ${signedKg(target.weeklyChangeKg)} a week.`;
+  const split =
+    today.kcal === today.averageKcal
+      ? ''
+      : ` ${today.restDay ? 'Rest' : 'Training'} day: ${kcalText(today.kcal)} of a ${kcalText(today.averageKcal)} weekly average.`;
+  const locked = today.provisional
+    ? ' Check in to fix this target for the week.'
+    : ` Set at your check-in ${formatRelative(today.checkIn.dateKey, ctx.ui.dateKey)}.`;
   return el('div', { style: 'margin-top: 12px' }, [
     buttons,
-    el('dl', { class: 'stat-grid', style: 'margin-top: 12px' }, [stat('Daily target', kcalText(target.kcal))]),
-    el('p', { class: 'meta', style: 'margin-top: 8px' }, `${change}${trackText(estimate, target)}`)
+    checkInBox(ctx),
+    el('dl', { class: 'stat-grid', style: 'margin-top: 12px' }, [
+      stat('Today’s target', kcalText(today.kcal)),
+      stat('Protein', `${today.protein} g`),
+      stat('Fat', `${today.fat} g`),
+      stat('Carbs', `${today.carbs} g`)
+    ]),
+    el('p', { class: 'meta', style: 'margin-top: 8px' }, `${change}${split}${locked}${trackText(estimate, target)}`),
+    splitButtons(ctx)
+  ]);
+}
+
+// Same calories every day, or more on training days and less on rest days.
+function splitButtons(ctx) {
+  const { state, actions } = ctx;
+  const current = state.settings.calorieSplit;
+  return el(
+    'div',
+    { class: 'add-row', role: 'group', 'aria-label': 'Calories across the week', style: 'margin-top: 12px' },
+    Object.entries(SPLITS).map(([key, label]) =>
+      el(
+        'button',
+        {
+          type: 'button',
+          class: key === current ? 'primary' : 'ghost',
+          'aria-pressed': String(key === current),
+          style: 'flex: 1',
+          onclick: () => actions.change((s) => setSplit(s, key))
+        },
+        label
+      )
+    )
+  );
+}
+
+// The weekly check-in: what changed since the last one, and the proposed target.
+function checkInBox(ctx) {
+  const { state, ui, actions } = ctx;
+  if (!checkInDue(state, ui.dateKey)) return null;
+  const proposal = proposeCheckIn(state, ui.dateKey);
+  const previous = proposal.previous && proposal.previous.goal === proposal.goal ? proposal.previous : null;
+  const diff = (now, before, unit) => {
+    const d = Math.round((now - before) * 100) / 100;
+    return d === 0 ? ' (no change)' : ` (${d > 0 ? '+' : '−'}${Math.abs(d).toLocaleString()}${unit})`;
+  };
+  const lines = [
+    `Burn ${kcalText(proposal.burnKcal)}${previous ? diff(proposal.burnKcal, previous.burnKcal, '') : ''}`,
+    `Trend weight ${proposal.trendKg.toFixed(1)} kg${previous ? diff(proposal.trendKg, previous.trendKg, ' kg') : ''}`,
+    `New daily target ${kcalText(proposal.kcal)}${previous ? `, was ${kcalText(previous.kcal)}` : ''}`
+  ];
+  return el('div', { class: 'check-in', style: 'margin-top: 12px' }, [
+    el('strong', {}, previous ? 'Weekly check-in' : 'First check-in'),
+    el('ul', { class: 'check-in-list' }, lines.map((line) => el('li', {}, line))),
+    proposal.capped
+      ? el('p', { class: 'meta' }, `Moved ${MAX_CHECK_IN_STEP} kcal this week, not all the way — one week’s data is noisy.`)
+      : null,
+    el(
+      'button',
+      {
+        type: 'button',
+        class: 'primary wide',
+        style: 'margin-top: 10px',
+        onclick: () => {
+          actions.change((s) => applyCheckIn(s, ui.dateKey));
+          actions.toast(`Target set: ${kcalText(proposal.kcal)} a day until next week.`);
+        }
+      },
+      'Apply new target'
+    )
   ]);
 }
 
@@ -275,6 +369,7 @@ function profileForm(ctx) {
 function energyCard(ctx) {
   const { state, ui, actions } = ctx;
   const today = caloriesOn(state, ui.dateKey);
+  const logged = dayMacros(state, ui.dateKey).kcal;
   const input = el('input', {
     type: 'number',
     id: 'calories-today',
@@ -282,9 +377,26 @@ function energyCard(ctx) {
     min: '0',
     max: '15000',
     step: '10',
-    placeholder: 'kcal',
+    placeholder: logged === null ? 'kcal' : String(logged),
     value: today === null ? '' : String(today)
   });
+  const source =
+    today !== null && logged !== null
+      ? el('p', { class: 'meta', style: 'margin-top: 8px' }, [
+          `Using your typed total instead of the food log (${kcalText(logged)}). `,
+          el(
+            'button',
+            { type: 'button', class: 'ghost', onclick: () => actions.change((s) => removeCalories(s, ui.dateKey)) },
+            'Use food log'
+          )
+        ])
+      : el(
+          'p',
+          { class: 'meta', style: 'margin-top: 8px' },
+          logged !== null
+            ? `From your food log so far: ${kcalText(logged)}. Type a total only for a day you tracked somewhere else.`
+            : 'Log food on the Food tab, or type the day’s total from another app. Skip days you didn’t track rather than guessing.'
+        );
 
   const submit = () => {
     const kcal = numberValue(input);
@@ -304,11 +416,7 @@ function energyCard(ctx) {
       el('div', { class: 'field' }, [el('label', { for: 'calories-today' }, 'Calories today (kcal)'), input]),
       el('button', { type: 'button', class: 'primary add-set', onclick: submit }, today === null ? 'Save' : 'Update')
     ]),
-    el(
-      'p',
-      { class: 'meta', style: 'margin-top: 8px' },
-      'Your day’s total from your food app or labels. Skip days you didn’t track rather than guessing.'
-    ),
+    source,
     estimateBlock(ctx),
     profileForm(ctx)
   ]);
@@ -317,6 +425,7 @@ function energyCard(ctx) {
 function logCard(ctx) {
   const { state, ui, actions } = ctx;
   const entries = weighIns(state).slice(0, LOG_LIMIT);
+  const trendBy = new Map(trendSeries(state).map((p) => [p.dateKey, p.trendKg]));
   return card(null, [
     el('h3', {}, 'Log'),
     entries.length === 0
@@ -331,7 +440,10 @@ function logCard(ctx) {
                 formatHuman(dateKey),
                 when === formatHuman(dateKey) ? null : el('span', { class: 'entry-time' }, ` · ${when}`)
               ]),
-              el('span', { class: 'entry-grams' }, `${kg} kg`),
+              el('span', { class: 'entry-grams' }, [
+                `${kg} kg`,
+                el('span', { class: 'entry-kcal' }, ` → ${trendBy.get(dateKey).toFixed(1)}`)
+              ]),
               el(
                 'button',
                 {

@@ -1,21 +1,28 @@
-// Protein tab: today's total against the target, editable quick-add buttons,
-// the food list, manual entry, and today's log. Calculations live in
-// src/core/nutrition.js and src/core/foods.js.
+// Food tab (key `protein`): today's protein against the target with calories,
+// fat and carbs, editable quick-add buttons, the food list, manual entry, and
+// today's log. Calculations live in src/core/nutrition.js and src/core/foods.js.
 
-import { dayTotal, entriesFor, progressRatio, remaining, targetOf } from '../core/nutrition.js';
+import { dayMacros, dayTotal, entriesFor, progressRatio, remaining, targetOf } from '../core/nutrition.js';
 import {
   FOODS,
   addCustomFood,
   foodById,
+  macrosFor,
   nextFoodId,
-  proteinFor,
   recentFoods,
   removeCustomFood,
   searchFoods
 } from '../core/foods.js';
 import { formatClockTime } from '../core/dates.js';
+import { dailyTargets } from '../core/targets.js';
 import { PHOTO_PROMPT, parseEstimate } from '../core/estimate.js';
 import { card, clear, el, numberValue } from './dom.js';
+
+// "248 kcal · F 5 g · C 0 g", or '' when calories are unknown.
+export function macroText({ kcal, fat, carbs }) {
+  if (kcal === null || kcal === undefined) return '';
+  return `${kcal.toLocaleString()} kcal · F ${fat ?? 0} g · C ${carbs ?? 0} g`;
+}
 
 function totalCard(ctx) {
   const { state, ui } = ctx;
@@ -24,9 +31,15 @@ function totalCard(ctx) {
   const left = remaining(state, ui.dateKey);
   const ratio = progressRatio(state, ui.dateKey);
   const done = left === 0;
+  const eaten = dayMacros(state, ui.dateKey);
+  const targets = dailyTargets(state, ui.dateKey);
+  // With a goal set: eaten against today's targets; otherwise just what was eaten.
+  const macros = targets
+    ? `${(eaten.kcal ?? 0).toLocaleString()} / ${targets.kcal.toLocaleString()} kcal · F ${eaten.fat ?? 0} / ${targets.fat} g · C ${eaten.carbs ?? 0} / ${targets.carbs} g`
+    : macroText(eaten);
 
   return card('protein-total', [
-    el('div', { class: 'protein-number' }, [String(total), el('span', {}, ` / ${target} g`)]),
+    el('div', { class: 'protein-number' }, [String(total), el('span', {}, ` / ${target} g protein`)]),
     el(
       'p',
       { class: done ? 'protein-sub done' : 'protein-sub' },
@@ -34,7 +47,8 @@ function totalCard(ctx) {
     ),
     el('div', { class: 'bar', role: 'img', 'aria-label': `${total} of ${target} grams` }, [
       el('div', { class: done ? 'done' : null, style: `transform: scaleX(${ratio})` })
-    ])
+    ]),
+    el('p', { class: 'macro-line' }, macros || 'Log foods to see calories, fat and carbs.')
   ]);
 }
 
@@ -55,7 +69,7 @@ function photoCard(ctx) {
   const answer = el('textarea', {
     id: 'estimate-answer',
     rows: 3,
-    placeholder: 'Paste the answer here (it starts with PROTEIN:)'
+    placeholder: 'Paste the answer here (it starts with FOOD:)'
   });
   const error = el('p', { class: 'errors', hidden: true });
 
@@ -68,7 +82,7 @@ function photoCard(ctx) {
     }
     actions.setEstimate({
       skipped: result.skipped,
-      items: result.items.map((item) => ({ ...item, include: item.protein > 0 }))
+      items: result.items.map((item) => ({ ...item, include: item.protein > 0 || item.kcal > 0 }))
     });
   };
 
@@ -124,26 +138,24 @@ function photoCard(ctx) {
 function reviewCard(ctx) {
   const { actions } = ctx;
   const estimate = ctx.ui.estimate;
-  const totalOf = () =>
-    estimate.items.reduce((sum, item) => sum + (item.include && item.protein > 0 ? item.protein : 0), 0);
+  const counts = (item) => item.include && (item.protein > 0 || item.kcal > 0);
+  const sumOf = (key) => estimate.items.reduce((sum, item) => sum + (counts(item) ? item[key] || 0 : 0), 0);
   const logButton = el('button', { type: 'button', class: 'primary' });
   const paintTotal = () => {
-    const total = totalOf();
-    logButton.textContent = `Log ${total} g`;
-    logButton.disabled = total === 0;
+    const protein = sumOf('protein');
+    const kcal = sumOf('kcal');
+    logButton.textContent = kcal > 0 ? `Log ${protein} g · ${kcal.toLocaleString()} kcal` : `Log ${protein} g`;
+    logButton.disabled = protein === 0 && kcal === 0;
   };
+
+  const numberInput = (id, value, label) =>
+    el('input', { type: 'number', id, inputmode: 'numeric', min: '0', step: '1', value: String(value), 'aria-label': label });
 
   const rows = estimate.items.map((item, index) => {
     const box = el('input', { type: 'checkbox', id: `estimate-include-${index}`, checked: item.include });
-    const grams = el('input', {
-      type: 'number',
-      id: `estimate-protein-${index}`,
-      inputmode: 'numeric',
-      min: '0',
-      step: '1',
-      value: String(item.protein),
-      'aria-label': `Protein in ${item.name}, grams`
-    });
+    const grams = numberInput(`estimate-protein-${index}`, item.protein, `Protein in ${item.name}, grams`);
+    const hasKcal = item.kcal !== undefined && item.kcal !== null;
+    const kcal = hasKcal ? numberInput(`estimate-kcal-${index}`, item.kcal, `Calories in ${item.name}`) : null;
     box.addEventListener('change', () => {
       item.include = box.checked;
       paintTotal();
@@ -152,21 +164,32 @@ function reviewCard(ctx) {
       item.protein = Math.max(0, Math.round(numberValue(grams) ?? 0));
       paintTotal();
     });
-    return el('li', { class: 'estimate-row' }, [
+    kcal?.addEventListener('input', () => {
+      item.kcal = Math.max(0, Math.round(numberValue(kcal) ?? 0));
+      paintTotal();
+    });
+    return el('li', { class: hasKcal ? 'estimate-row with-kcal' : 'estimate-row' }, [
       box,
       el('label', { for: box.id, class: 'estimate-name' }, [
         item.name,
-        item.grams ? el('span', { class: 'entry-time' }, ` · ~${item.grams} g`) : null
+        item.grams ? el('span', { class: 'entry-time' }, ` · ~${item.grams} g`) : null,
+        hasKcal ? el('span', { class: 'entry-time' }, ` · F ${item.fat} · C ${item.carbs}`) : null
       ]),
       grams,
-      el('span', { class: 'estimate-unit' }, 'g')
+      el('span', { class: 'estimate-unit' }, 'g'),
+      kcal,
+      hasKcal ? el('span', { class: 'estimate-unit' }, 'kcal') : null
     ]);
   });
 
   logButton.addEventListener('click', () => {
-    const entries = estimate.items
-      .filter((item) => item.include && item.protein > 0)
-      .map((item) => ({ label: `Photo · ${item.name}`, grams: item.protein }));
+    const entries = estimate.items.filter(counts).map((item) => ({
+      label: `Photo · ${item.name}`,
+      grams: item.protein,
+      kcal: item.kcal ?? undefined,
+      fatG: item.fat ?? undefined,
+      carbsG: item.carbs ?? undefined
+    }));
     if (entries.length > 0) actions.logEstimate(entries);
   });
   paintTotal();
@@ -343,8 +366,15 @@ function quickAddCard(ctx) {
 
 const MAX_RESULTS = 8;
 
+// "31 g protein · 165 kcal" per 100 g; protein only for older custom foods.
+function per100Text(food) {
+  const kcal = food.kcalPer100g === undefined ? '' : ` · ${food.kcalPer100g} kcal`;
+  return `${food.proteinPer100g} g protein${kcal}`;
+}
+
 function foodMeta(food) {
-  return `${food.proteinPer100g} g per 100 g · 1 ${food.servingLabel} = ${food.servingG} g`;
+  const extra = food.kcalPer100g === undefined ? '' : ` · F ${food.fatPer100g} g · C ${food.carbsPer100g} g`;
+  return `Per 100 g: ${per100Text(food)}${extra} · 1 ${food.servingLabel} = ${food.servingG} g`;
 }
 
 function foodResults(ctx, query) {
@@ -365,7 +395,7 @@ function foodResults(ctx, query) {
         el('li', {}, [
           el('button', { type: 'button', onclick: () => actions.selectFood(food.id) }, [
             food.name,
-            el('span', { class: 'entry-time' }, ` · ${food.proteinPer100g} g/100 g`)
+            el('span', { class: 'entry-time' }, ` · ${per100Text(food)} /100 g`)
           ])
         ])
       )
@@ -394,7 +424,9 @@ function selectedFoodPanel(ctx, food) {
     return unit.value === 'grams' ? { grams: value } : { servings: value };
   };
   const update = () => {
-    preview.textContent = `= ${proteinFor(food, currentAmount())} g protein`;
+    const macros = macrosFor(food, currentAmount());
+    const rest = macroText(macros);
+    preview.textContent = `= ${macros.protein} g protein${rest ? ` · ${rest}` : ''}`;
   };
   // Switching unit converts the number so the amount eaten stays the same.
   unit.addEventListener('change', () => {
@@ -404,8 +436,8 @@ function selectedFoodPanel(ctx, food) {
   });
   amount.addEventListener('input', update);
   const submit = () => {
-    const grams = proteinFor(food, currentAmount());
-    if (grams <= 0) {
+    const { protein, kcal } = macrosFor(food, currentAmount());
+    if (protein <= 0 && !kcal) {
       amount.focus();
       actions.toast('Enter how much you ate.');
       return;
@@ -450,6 +482,9 @@ function customFoodForm(ctx) {
   const { state, actions } = ctx;
   const name = el('input', { type: 'text', id: 'cf-name', placeholder: 'e.g. Barebells bar', autocomplete: 'off' });
   const per100 = el('input', { type: 'number', id: 'cf-protein', inputmode: 'decimal', min: '0', step: 'any', placeholder: 'g' });
+  const kcal100 = el('input', { type: 'number', id: 'cf-kcal', inputmode: 'decimal', min: '0', step: 'any', placeholder: 'kcal' });
+  const fat100 = el('input', { type: 'number', id: 'cf-fat', inputmode: 'decimal', min: '0', step: 'any', placeholder: 'g' });
+  const carbs100 = el('input', { type: 'number', id: 'cf-carbs', inputmode: 'decimal', min: '0', step: 'any', placeholder: 'g' });
   const servingG = el('input', { type: 'number', id: 'cf-serving', inputmode: 'decimal', min: '0', step: 'any', placeholder: '100' });
   const servingLabel = el('input', { type: 'text', id: 'cf-label', placeholder: 'bar, scoop…', autocomplete: 'off' });
   const field = (label, input) => el('div', { class: 'field' }, [el('label', { for: input.id }, label), input]);
@@ -461,12 +496,15 @@ function customFoodForm(ctx) {
         id,
         name: name.value,
         proteinPer100g: numberValue(per100) ?? 0,
+        kcalPer100g: numberValue(kcal100),
+        fatPer100g: numberValue(fat100),
+        carbsPer100g: numberValue(carbs100),
         servingG: numberValue(servingG) ?? 0,
         servingLabel: servingLabel.value
       })
     );
     if (!foodById(next, id)) {
-      actions.toast('Give the food a name and its protein per 100 g.');
+      actions.toast('Give the food a name and its protein or calories per 100 g.');
       return;
     }
     actions.selectFood(id);
@@ -474,8 +512,10 @@ function customFoodForm(ctx) {
 
   return el('div', { class: 'stack food-form' }, [
     field('Name', name),
-    el('div', { class: 'add-row' }, [field('Protein per 100 g', per100), field('Serving (g)', servingG)]),
-    field('Serving name', servingLabel),
+    el('p', { class: 'meta', style: 'margin: 0' }, 'Per 100 g, from the label:'),
+    el('div', { class: 'add-row' }, [field('Calories (kcal)', kcal100), field('Protein (g)', per100)]),
+    el('div', { class: 'add-row' }, [field('Fat (g)', fat100), field('Carbs (g)', carbs100)]),
+    el('div', { class: 'add-row' }, [field('Serving (g)', servingG), field('Serving name', servingLabel)]),
     el('div', { class: 'button-row' }, [
       el('button', { type: 'button', class: 'ghost', onclick: () => actions.toggleFoodForm() }, 'Cancel'),
       el('button', { type: 'button', class: 'primary', onclick: save }, 'Save food')
@@ -528,6 +568,14 @@ function manualCard(ctx) {
     step: '1',
     placeholder: 'g'
   });
+  const kcalInput = el('input', {
+    type: 'number',
+    id: 'manual-kcal',
+    inputmode: 'numeric',
+    min: '0',
+    step: '1',
+    placeholder: 'optional'
+  });
   const labelInput = el('input', {
     type: 'text',
     id: 'manual-label',
@@ -535,22 +583,25 @@ function manualCard(ctx) {
   });
 
   const submit = () => {
-    const grams = numberValue(gramsInput);
-    if (grams === null || grams <= 0) {
+    const grams = numberValue(gramsInput) ?? 0;
+    const kcal = numberValue(kcalInput);
+    if (grams <= 0 && !(kcal > 0)) {
       gramsInput.focus();
-      actions.toast('Enter grams of protein.');
+      actions.toast('Enter grams of protein or the calories.');
       return;
     }
-    actions.addProtein({ label: labelInput.value.trim() || 'Protein', grams });
+    actions.addProtein({ label: labelInput.value.trim() || (grams > 0 ? 'Protein' : 'Food'), grams, kcal: kcal ?? undefined });
   };
 
-  gramsInput.addEventListener('keydown', (e) => e.key === 'Enter' && submit());
-  labelInput.addEventListener('keydown', (e) => e.key === 'Enter' && submit());
+  for (const input of [gramsInput, kcalInput, labelInput]) input.addEventListener('keydown', (e) => e.key === 'Enter' && submit());
 
   return card(null, [
     el('h3', {}, 'Add manually'),
     el('div', { class: 'add-row' }, [
-      el('div', { class: 'field' }, [el('label', { for: 'manual-grams' }, 'Grams'), gramsInput]),
+      el('div', { class: 'field' }, [el('label', { for: 'manual-grams' }, 'Protein (g)'), gramsInput]),
+      el('div', { class: 'field' }, [el('label', { for: 'manual-kcal' }, 'Calories'), kcalInput])
+    ]),
+    el('div', { class: 'add-row' }, [
       el('div', { class: 'field' }, [el('label', { for: 'manual-label' }, 'Label'), labelInput]),
       el('button', { type: 'button', class: 'primary add-set', onclick: submit }, 'Add')
     ])
@@ -574,7 +625,10 @@ function logCard(ctx) {
                 entry.label,
                 entry.ts ? el('span', { class: 'entry-time' }, ` · ${formatClockTime(entry.ts)}`) : null
               ]),
-              el('span', { class: 'entry-grams' }, `${entry.grams} g`),
+              el('span', { class: 'entry-grams' }, [
+                `${entry.grams} g`,
+                Number.isFinite(entry.kcal) ? el('span', { class: 'entry-kcal' }, ` · ${entry.kcal} kcal`) : null
+              ]),
               el(
                 'button',
                 {

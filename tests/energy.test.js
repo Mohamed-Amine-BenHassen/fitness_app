@@ -4,12 +4,15 @@ import { defaultState } from '../src/core/schema.js';
 import { shiftDateKey } from '../src/core/dates.js';
 import { logWeight } from '../src/core/bodyweight.js';
 import { backupSummary, migrate, parseBackup, serializeBackup } from '../src/core/backup.js';
+import { addEntry } from '../src/core/nutrition.js';
+import { logFood } from '../src/core/foods.js';
 import {
   caloriesOn,
   energyOfChange,
   calorieTarget,
   estimateTdee,
   formulaTdee,
+  intakeOn,
   logCalories,
   normalizeProfile,
   removeCalories,
@@ -184,6 +187,25 @@ test('the profile and goal survive export and import', () => {
   const state = setGoal(setProfile(defaultState(), PROFILE), 'bulk');
   assert.deepEqual(parseBackup(serializeBackup(state, null)).state, state);
   assert.equal(migrate({ schemaVersion: 4 }).settings.profile, null);
+});
+
+test('logged food counts as intake; a typed total overrides it; protein-only days do not count', () => {
+  let state = defaultState();
+  state = logFood(state, TODAY, 'rice', { grams: 200 }, 1);
+  state = addEntry(state, '2026-10-08', { label: 'Shake', grams: 27 }, 1);
+  assert.equal(intakeOn(state, TODAY), 260);
+  assert.equal(intakeOn(state, '2026-10-08'), null);
+  state = logCalories(state, TODAY, 2400);
+  assert.equal(intakeOn(state, TODAY), 2400);
+  // A whole history logged as food gives an estimate with no typed totals.
+  let logged = defaultState();
+  for (let i = 0; i < 28; i++) {
+    const dateKey = shiftDateKey(TODAY, i - 27);
+    logged = logFood(logged, dateKey, 'rice', { grams: 1000 }, 1);
+    logged = logFood(logged, dateKey, 'chicken-breast', { grams: 600 }, 2);
+    logged = logWeight(logged, dateKey, 82);
+  }
+  assert.equal(estimateTdee(logged, TODAY).kcal, 1300 + 990);
 });
 
 test('calories survive export and import; junk is dropped; v4 data gets an empty log', () => {

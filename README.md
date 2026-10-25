@@ -64,24 +64,34 @@ version in the background and reloads itself.
   keep their names. Restore them from the same screens.
 - The default plan is the 6-day split in [`plan.md`](plan.md).
 
-### Protein
-- Daily total against your target (default 190 g).
-- **Quick add** buttons you set up yourself (label and grams).
+### Food
+- Daily protein against your target (default 190 g), with the day's calories,
+  fat and carbs — against today's targets once a goal is set on the Body tab.
+- **Quick add** buttons you set up yourself (label and grams of protein).
 - **Food list** — 123 common foods and takeaway dishes, halal (no pork), with German names in search
   (*Hähnchenbrust*, *Magerquark*, *Thunfisch* …); search, pick, enter grams or servings, and the
-  protein is logged. Recent foods come first. Add your own (e.g. a branded bar)
-  with its protein per 100 g. Built-in values are estimates from standard tables.
+  protein, calories, fat and carbs are logged. Recent foods come first. Add your
+  own (e.g. a branded bar) from its label per 100 g; a food can be calories only
+  (oil, a drink). Built-in values are estimates from standard tables; each one's
+  calories are checked against its macros (4/4/9 kcal per g).
 - **Estimate from a photo** — through the AI app you already use (Gemini or
   Claude): *Copy prompt*, send it there with your meal photo, paste the one-line
-  answer back. A review sheet lists each food with editable protein; nothing is
-  logged until you tap *Log*. The tracker itself makes no network call and needs
-  no API key.
-- Free-text entries, and today's log.
+  answer back. A review sheet lists each food with editable protein and
+  calories; nothing is logged until you tap *Log*. The tracker itself makes no
+  network call and needs no API key. Answers in the older protein-only format
+  still work.
+- Free-text entries (protein, calories or both), and today's log. Entries
+  logged before calories were tracked keep their protein and count no calories.
 
 ### Body
-- One weigh-in a day (logging again replaces it), with the latest weight, 7-day
-  average, change against the previous 7 days, and your protein target in g/kg.
-- **Estimated burn (TDEE)** — log the day's calorie total and, after two weeks
+- One weigh-in a day (logging again replaces it), with the latest weight, the
+  **trend weight** and its weekly change, the 7-day average, and your protein
+  target in g/kg. The trend moves 10% of the way to each daily weigh-in (gaps
+  count as that many days), so a kilo of water moves it 0.1 kg; the log shows
+  the trend next to each weigh-in.
+- **Estimated burn (TDEE)** — calories come from the food log, or from a day's
+  total typed in on the Body tab (for days tracked elsewhere; it wins over the
+  log). After two weeks
   (10+ days of calories, 3+ weigh-ins spread over a week), the card shows what
   you burn per day with a likely range. Over the last 4 weeks it takes your
   average logged intake and corrects it by your weight trend (a least-squares
@@ -97,8 +107,17 @@ version in the background and reloads itself.
   estimate. Rates scale with body weight: a cut aims to lose 0.5% of body weight
   a week (× 7700 kcal/kg), a lean bulk to gain 0.25% a week (× 5000 kcal/kg),
   maintain eats the burn. A cut is capped at 25% below the burn, a bulk at 15%
-  above. Once the log has enough data it says whether your weight is moving
-  as planned (within 0.2 kg a week).
+  above. Rates use the trend weight. Once the log has enough data it says
+  whether your weight is moving as planned (within 0.2 kg a week).
+- **Weekly check-in** — the target holds for a week. A check-in card shows the
+  burn and trend weight against last time and proposes the next target;
+  *Apply* fixes it until the next check-in, due a week later or as soon as the
+  goal changes. With the same goal a check-in moves the target at most 200 kcal.
+- **Macro targets** — protein is your protein target; fat is a quarter of
+  calories but never under 0.6 g per kg; carbs fill the rest.
+- **More on training days** — optional: rest days in the active plan get 15%
+  less than the week's average and training days share the difference, so the
+  week adds up the same. Fat stays put; carbs carry the change.
 
 ### Backup
 - **Export** everything to a JSON file; **import** it on any device. Import
@@ -115,7 +134,7 @@ Out of scope by design: charts, accounts, sync, notifications.
 
 - Everything lives in this browser on this phone. Clearing the browser's site
   data deletes it, so **export a backup now and then**.
-- Data carries a schema version (currently **5**). Older data and older backups
+- Data carries a schema version (currently **6**). Older data and older backups
   are upgraded automatically on load or import, and history is never rewritten.
   A backup from a *newer* version of the app is refused rather than half-read.
 - The rest timer is kept per device and is not part of backups.
@@ -125,7 +144,7 @@ Out of scope by design: charts, accounts, sync, notifications.
 No dependencies and no build step — plain ES modules.
 
 ```bash
-node --test              # 209 tests
+node --test              # 230 tests
 node tools/serve.mjs     # http://localhost:8080
 ```
 
@@ -163,7 +182,7 @@ src/core/                          pure logic, no DOM — what the tests cover
   progression.js  history.js       next-target suggestions; read-only history
   nutrition.js  foods.js           protein entries, quick adds; food list
   bodyweight.js  timer.js          weigh-ins and averages; rest timer maths
-  energy.js                        daily calories; expenditure (TDEE) estimate
+  energy.js  targets.js            burn (TDEE) estimate; check-ins, macro and day targets
   techniques.js  dates.js          technique notes; local-date helpers
 src/data/store.js                  the only module that touches localStorage
 src/ui/                            one renderer per tab or screen, plus dom.js helpers

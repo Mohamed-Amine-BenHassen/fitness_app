@@ -10,6 +10,7 @@
 
 import { daysBetween, shiftDateKey } from './dates.js';
 import { weighIns } from './bodyweight.js';
+import { dayMacros } from './nutrition.js';
 
 export const MAX_KCAL = 15000;
 
@@ -32,6 +33,18 @@ export function removeCalories(state, dateKey) {
 
 export function caloriesOn(state, dateKey) {
   return dateKey in state.calories ? state.calories[dateKey] : null;
+}
+
+// What was eaten that day: a typed total wins (for days tracked in another
+// app), else the food log's calories, else null — a protein-only day says
+// nothing about calories. A log of one snack is taken at its word, so a day
+// only partly logged belongs in the typed total or nowhere.
+export function intakeOn(state, dateKey) {
+  return caloriesOn(state, dateKey) ?? dayMacros(state, dateKey).kcal;
+}
+
+function intakeDates(state) {
+  return [...new Set([...Object.keys(state.calories), ...Object.keys(state.nutrition)])];
 }
 
 // Lost weight is mostly fat (~7700 kcal/kg). Weight gained while eating in a
@@ -169,7 +182,10 @@ function measureTdee(state, todayKey) {
   const inWindow = (dateKey) => dateKey >= startKey && dateKey <= endKey;
 
   const weights = all.filter((w) => inWindow(w.dateKey)).reverse();
-  const intake = Object.keys(state.calories).filter(inWindow).map((k) => state.calories[k]);
+  const intake = intakeDates(state)
+    .filter(inWindow)
+    .map((k) => intakeOn(state, k))
+    .filter((kcal) => kcal !== null);
   const days = weights.length ? daysBetween(weights[0].dateKey, endKey) + 1 : 0;
   const span = weights.length ? daysBetween(weights[0].dateKey, weights[weights.length - 1].dateKey) : 0;
 

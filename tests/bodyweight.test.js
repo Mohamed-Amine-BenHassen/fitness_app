@@ -9,9 +9,13 @@ import {
   logWeight,
   proteinPerKg,
   removeWeight,
+  trendOn,
+  trendSeries,
+  trendWeeklyChange,
   weeklyChange,
   weighIns
 } from '../src/core/bodyweight.js';
+import { shiftDateKey } from '../src/core/dates.js';
 
 const TODAY = '2026-10-09';
 
@@ -66,6 +70,38 @@ test('protein per kg uses the target and the latest weigh-in', () => {
   state = setProteinTarget(state, 165);
   assert.equal(proteinPerKg(state), 2);
   assert.equal(proteinPerKg(defaultState()), null);
+});
+
+test('the trend moves 10% of the way towards each daily weigh-in', () => {
+  const state = withWeights([['2026-10-07', 82], ['2026-10-08', 83], ['2026-10-09', 82]]);
+  // 82 → 82 + 0.1 × 1 = 82.1 → 82.1 + 0.1 × (82 − 82.1) = 82.09.
+  assert.deepEqual(trendSeries(state), [
+    { dateKey: '2026-10-07', kg: 82, trendKg: 82 },
+    { dateKey: '2026-10-08', kg: 83, trendKg: 82.1 },
+    { dateKey: '2026-10-09', kg: 82, trendKg: 82.09 }
+  ]);
+  assert.deepEqual(trendOn(state, '2026-10-08'), { dateKey: '2026-10-08', kg: 83, trendKg: 82.1 });
+  assert.equal(trendOn(defaultState(), TODAY), null);
+});
+
+test('a gap of days moves the trend as far as that many daily weigh-ins', () => {
+  // Three days later: 1 − 0.9³ = 27.1% of the way from 80 to 90.
+  const state = withWeights([['2026-10-06', 80], [TODAY, 90]]);
+  assert.equal(trendOn(state, TODAY).trendKg, 82.71);
+});
+
+test('a one-off spike barely moves the trend', () => {
+  const steady = Array.from({ length: 14 }, (_, i) => [shiftDateKey(TODAY, i - 14), 82]);
+  const state = withWeights([...steady, [TODAY, 84]]);
+  assert.equal(trendOn(state, TODAY).trendKg, 82.2);
+});
+
+test('trend weekly change needs a week of weigh-ins', () => {
+  // Losing 0.1 kg a day for four weeks: the trend settles onto −0.7 kg a week.
+  const losing = Array.from({ length: 28 }, (_, i) => [shiftDateKey(TODAY, i - 27), 90 - 0.1 * i]);
+  const change = trendWeeklyChange(withWeights(losing), TODAY);
+  assert.ok(change < -0.6 && change > -0.75, String(change));
+  assert.equal(trendWeeklyChange(withWeights([['2026-10-05', 82], [TODAY, 81]]), TODAY), null);
 });
 
 test('bodyweight survives export and import; junk is dropped', () => {
