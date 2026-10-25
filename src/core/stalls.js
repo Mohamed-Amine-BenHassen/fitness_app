@@ -5,6 +5,8 @@
 // its best reps for bodyweight work. Counting from the oldest, a session that
 // beats every score before it is progress; a run of sessions that doesn't is a
 // stall. The session being logged right now never counts: it isn't finished.
+// Like the last-time line, each session type keeps its own history: the same
+// exercise in Push A and Push B progresses (and stalls) separately.
 
 import { activePlan, liveSessions, resolveSession } from './plans.js';
 import { weightStepOf } from './progression.js';
@@ -28,6 +30,7 @@ function scoreOf(sets, byReps) {
 function pastEntries(state, exerciseId, current) {
   const currentId = current?.dateKey ? sessionId(current.dateKey, current.dayKey) : null;
   return state.sessions
+    .filter((s) => !current?.dayKey || s.dayKey === current.dayKey)
     .filter((s) => !current?.dateKey || (s.dateKey <= current.dateKey && sessionId(s.dateKey, s.dayKey) !== currentId))
     .map((s) => s.entries.find((e) => e.exerciseId === exerciseId))
     .filter((entry) => entry && entry.sets.length > 0);
@@ -66,16 +69,16 @@ export function stallFor(state, exercise, current) {
   return { sessions, lighterKg: lighterKg > 0 ? lighterKg : null };
 }
 
-// Every stalled lift in the active plan, each once, in plan order.
+// Every stalled lift in the active plan, in plan order — once per session it
+// appears in, since each session type has its own history.
 export function stalledLifts(state, current) {
-  const seen = new Set();
   const stalled = [];
   for (const def of liveSessions(activePlan(state))) {
     for (const exercise of resolveSession(state, def.key).exercises) {
-      if (seen.has(exercise.id)) continue;
-      seen.add(exercise.id);
-      const stall = stallFor(state, exercise, current);
-      if (stall) stalled.push({ id: exercise.id, name: exercise.name, sessions: stall.sessions });
+      const stall = stallFor(state, exercise, { dateKey: current?.dateKey, dayKey: def.key });
+      if (stall) {
+        stalled.push({ id: exercise.id, name: exercise.name, dayKey: def.key, sessionName: def.name, sessions: stall.sessions });
+      }
     }
   }
   return stalled;

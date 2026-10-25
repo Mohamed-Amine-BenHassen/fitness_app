@@ -11,8 +11,8 @@ const incline = resolveSession(defaultState(), 'pushA').exercises.find((e) => e.
 const legRaise = resolveSession(defaultState(), 'legsA').exercises.find((e) => e.id === 'hanging-leg-raise');
 const TODAY = { dateKey: '2026-10-12', dayKey: 'pushA' };
 
-function lastTime(sets, exerciseId = 'incline-db-press', state = defaultState()) {
-  for (const set of sets) state = addSet(state, '2026-10-05', 'pushA', exerciseId, set);
+function lastTime(sets, exerciseId = 'incline-db-press', state = defaultState(), dayKey = 'pushA') {
+  for (const set of sets) state = addSet(state, '2026-10-05', dayKey, exerciseId, set);
   return state;
 }
 
@@ -55,7 +55,7 @@ test('mixed weights: the heaviest are the working sets', () => {
 });
 
 test('bodyweight exercises aim for one more rep than the best set', () => {
-  const state = lastTime([{ weightKg: null, reps: 12 }, { weightKg: null, reps: 14 }], 'hanging-leg-raise');
+  const state = lastTime([{ weightKg: null, reps: 12 }, { weightKg: null, reps: 14 }], 'hanging-leg-raise', defaultState(), 'legsA');
   assert.deepEqual(suggestNext(state, legRaise, { dateKey: '2026-10-12', dayKey: 'legsA' }), {
     weightKg: null,
     reps: 15,

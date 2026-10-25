@@ -62,6 +62,19 @@ test('the lighter weight always ends up below last time’s top set', () => {
   assert.deepEqual(stallFor(state, lateral, TODAY), { sessions: 3, lighterKg: 2.5 });
 });
 
+test('the same exercise stalls separately in each session type', () => {
+  // Flat in Push A, climbing in Push B: only Push A has stalled.
+  let state = history(defaultState(), 'incline-db-press', [[32.5, 9], [32.5, 8], [32.5, 9], [32.5, 8]]);
+  state = history(state, 'incline-db-press', [[25, 8], [25, 9], [25, 10], [27.5, 8]], 'pushB');
+  const pushBIncline = resolveSession(state, 'pushB').exercises.find((e) => e.id === 'incline-db-press');
+  assert.deepEqual(stallFor(state, incline, TODAY), { sessions: 3, lighterKg: 30 });
+  assert.equal(stallFor(state, pushBIncline, { dateKey: TODAY.dateKey, dayKey: 'pushB' }), null);
+  assert.deepEqual(
+    stalledLifts(state, TODAY).map((lift) => [lift.id, lift.dayKey, lift.sessionName]),
+    [['incline-db-press', 'pushA', 'Push A']]
+  );
+});
+
 test('a deload is suggested once three lifts in the plan stall together', () => {
   const flat = [[30, 9], [30, 8], [30, 9], [30, 8]];
   let state = history(defaultState(), 'incline-db-press', flat);

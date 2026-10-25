@@ -70,14 +70,17 @@ export function removeSet(state, dateKey, dayKey, exerciseId, index) {
   });
 }
 
-// The most recent time this exercise was performed, ignoring the session being
-// logged right now. Deliberately not scoped to the same day-key: Incline DB Press
-// appears in both Push A and Push B, and the newer numbers are the useful ones.
+// The most recent time this exercise was performed in the same session type
+// (`current.dayKey`), ignoring the session being logged right now. Scoped on
+// purpose: Incline DB Press in Push A (chest-led, heavy) and in Push B (after
+// shoulders) are run at different weights, so each follows its own history.
+// Without a dayKey, any session counts.
 export function lastPerformance(state, exerciseId, current = {}) {
   const currentId = current.dateKey ? sessionId(current.dateKey, current.dayKey) : null;
   for (let i = state.sessions.length - 1; i >= 0; i -= 1) {
     const session = state.sessions[i];
     if (currentId && sessionId(session.dateKey, session.dayKey) === currentId) continue;
+    if (current.dayKey && session.dayKey !== current.dayKey) continue;
     const entry = session.entries.find((e) => e.exerciseId === exerciseId);
     if (entry && entry.sets.length > 0) {
       return { dateKey: session.dateKey, dayKey: session.dayKey, sets: entry.sets };

@@ -23,6 +23,10 @@ version in the background and reloads itself.
 - **Set logger** — weight × reps per set. Above the inputs: what you did last
   time, and a **Next** target. The inputs prefill with that target, then with
   your last set once you've started the exercise.
+- **Each session keeps its own history** — an exercise in two sessions (Incline
+  DB Press in Push A and Push B) is tracked separately: last time, ▲ / = / ▼,
+  the Next target and stalls only look at the same session. The first time in
+  a new session is a fresh baseline. Personal records stay all-time.
 - **Next target** (double progression) — top of the rep range on every set →
   add one weight step and drop to the bottom of the range; below the range →
   same weight; otherwise one more rep. The step is one setting for everything

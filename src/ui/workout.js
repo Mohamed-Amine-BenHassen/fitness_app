@@ -130,7 +130,7 @@ function deloadCard(ctx) {
   const { state, ui } = ctx;
   const advice = deloadAdvice(state, { dateKey: ui.dateKey, dayKey: ui.dayKey });
   if (!advice) return null;
-  const names = advice.lifts.map((lift) => lift.name);
+  const names = advice.lifts.map((lift) => `${lift.name} (${lift.sessionName})`);
   const listed = names.length > 3 ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more` : names.join(', ');
   return card('deload', [
     el('h3', {}, 'Time for a deload week?'),

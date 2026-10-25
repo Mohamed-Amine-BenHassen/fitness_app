@@ -45,19 +45,26 @@ test('sessions stay sorted by date regardless of insertion order', () => {
   assert.deepEqual(state.sessions.map((s) => s.dateKey), ['2026-09-07', '2026-09-09', '2026-09-11']);
 });
 
-test('last performance finds the exercise across different session types', () => {
+test('last performance stays within the same session type', () => {
   let state = seed();
-  state = addSet(state, '2026-09-07', 'pushA', 'incline-db-press', { weightKg: 30, reps: 9 });
-  state = addSet(state, '2026-09-10', 'pushB', 'incline-db-press', { weightKg: 32.5, reps: 8 });
-  const last = lastPerformance(state, 'incline-db-press', { dateKey: '2026-09-14', dayKey: 'pushA' });
-  assert.equal(last.dateKey, '2026-09-10');
-  assert.equal(last.dayKey, 'pushB');
-  assert.deepEqual(last.sets, [{ weightKg: 32.5, reps: 8 }]);
+  state = addSet(state, '2026-09-07', 'pushA', 'incline-db-press', { weightKg: 32.5, reps: 8 });
+  state = addSet(state, '2026-09-10', 'pushB', 'incline-db-press', { weightKg: 25, reps: 10 });
+  // Push A follows Push A, even though Push B was more recent.
+  const pushA = lastPerformance(state, 'incline-db-press', { dateKey: '2026-09-14', dayKey: 'pushA' });
+  assert.equal(pushA.dateKey, '2026-09-07');
+  assert.deepEqual(pushA.sets, [{ weightKg: 32.5, reps: 8 }]);
+  const pushB = lastPerformance(state, 'incline-db-press', { dateKey: '2026-09-17', dayKey: 'pushB' });
+  assert.deepEqual(pushB.sets, [{ weightKg: 25, reps: 10 }]);
+  // The first Push B incline is a baseline, not a copy of Push A's numbers.
+  const onlyPushA = addSet(seed(), '2026-09-07', 'pushA', 'incline-db-press', { weightKg: 30, reps: 9 });
+  assert.equal(lastPerformance(onlyPushA, 'incline-db-press', { dateKey: '2026-09-10', dayKey: 'pushB' }), null);
+  // Without a session type, the latest anywhere.
+  assert.equal(lastPerformance(state, 'incline-db-press').dayKey, 'pushB');
 });
 
 test('last performance ignores the session being logged right now', () => {
   let state = seed();
-  state = addSet(state, '2026-09-07', 'pushA', 'triceps-pushdown', { weightKg: 30, reps: 12 });
+  state = addSet(state, '2026-09-07', 'pushB', 'triceps-pushdown', { weightKg: 30, reps: 12 });
   state = addSet(state, '2026-09-11', 'pushB', 'triceps-pushdown', { weightKg: 32.5, reps: 12 });
   const last = lastPerformance(state, 'triceps-pushdown', { dateKey: '2026-09-11', dayKey: 'pushB' });
   assert.equal(last.dateKey, '2026-09-07');
