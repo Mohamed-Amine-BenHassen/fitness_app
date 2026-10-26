@@ -67,6 +67,12 @@ version in the background and reloads itself.
 ### Food
 - Daily protein against your target (default 190 g), with the day's calories,
   fat and carbs — against today's targets once a goal is set on the Body tab.
+- **Water** — a bottle that fills towards the day's goal: +250 / +500 / +750 ml
+  and −250 to take one back. The water rises with a slosh, bubbles and a
+  count-up of the litres, the phone buzzes, and crossing the goal splashes and
+  lights the bottle up (all motion off under *reduce motion*). The goal is
+  35 ml per kg of trend weight to the nearest 250 ml (2.5 L before the first
+  weigh-in), or one you set.
 - **Quick add** buttons you set up yourself (label and grams of protein).
 - **Food list** — 123 common foods and takeaway dishes, halal (no pork), with German names in search
   (*Hähnchenbrust*, *Magerquark*, *Thunfisch* …); search, pick, enter grams or servings, and the
@@ -134,7 +140,7 @@ Out of scope by design: charts, accounts, sync, notifications.
 
 - Everything lives in this browser on this phone. Clearing the browser's site
   data deletes it, so **export a backup now and then**.
-- Data carries a schema version (currently **6**). Older data and older backups
+- Data carries a schema version (currently **7**). Older data and older backups
   are upgraded automatically on load or import, and history is never rewritten.
   A backup from a *newer* version of the app is refused rather than half-read.
 - The rest timer is kept per device and is not part of backups.
@@ -144,7 +150,7 @@ Out of scope by design: charts, accounts, sync, notifications.
 No dependencies and no build step — plain ES modules.
 
 ```bash
-node --test              # 230 tests
+node --test              # 237 tests
 node tools/serve.mjs     # http://localhost:8080
 ```
 
@@ -183,9 +189,10 @@ src/core/                          pure logic, no DOM — what the tests cover
   nutrition.js  foods.js           protein entries, quick adds; food list
   bodyweight.js  timer.js          weigh-ins and averages; rest timer maths
   energy.js  targets.js            burn (TDEE) estimate; check-ins, macro and day targets
+  water.js                         daily water and its goal
   techniques.js  dates.js          technique notes; local-date helpers
 src/data/store.js                  the only module that touches localStorage
-src/ui/                            one renderer per tab or screen, plus dom.js helpers
+src/ui/                            one renderer per tab or screen (water.js: the bottle), plus dom.js helpers
 fonts/                             Geist + Geist Mono (OFL), bundled so text renders offline
 about/                             landing page (/about/); screenshots use example data
 tests/                             node --test (core modules, plus the offline-cache check)

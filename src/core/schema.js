@@ -10,8 +10,9 @@ import { SEED_PLAN_ID, seedLibrary, seedPlan } from './program.js';
 // birth year, activity — for the starting TDEE estimate) and `settings.goal`
 // (cut, maintain or bulk). v6 let food-log entries and custom foods carry kcal,
 // fat and carbs, and added `checkIns` (weekly calorie targets) and
-// `settings.calorieSplit`. backup.js#migrate upgrades older data.
-export const SCHEMA_VERSION = 6;
+// `settings.calorieSplit`. v7 added `water` (ml drunk by date) and
+// `settings.waterGoalMl`. backup.js#migrate upgrades older data.
+export const SCHEMA_VERSION = 7;
 
 // plan.md leaves the quick-add gram values blank; they are edited in-app.
 export function defaultSettings() {
@@ -28,7 +29,8 @@ export function defaultSettings() {
     weightStepKg: 2.5,
     profile: null,
     goal: null,
-    calorieSplit: 'even'
+    calorieSplit: 'even',
+    waterGoalMl: null
   };
 }
 
@@ -42,7 +44,8 @@ export function defaultState() {
     nutrition: {},
     bodyweight: {},
     calories: {},
-    checkIns: []
+    checkIns: [],
+    water: {}
   };
 }
 

@@ -15,6 +15,7 @@ import {
 } from '../core/foods.js';
 import { formatClockTime } from '../core/dates.js';
 import { dailyTargets } from '../core/targets.js';
+import { waterCard } from './water.js';
 import { PHOTO_PROMPT, parseEstimate } from '../core/estimate.js';
 import { card, clear, el, numberValue } from './dom.js';
 
@@ -649,6 +650,7 @@ export function renderProtein(root, ctx) {
   clear(root);
   root.append(
     totalCard(ctx),
+    waterCard(ctx),
     quickAddCard(ctx),
     ctx.ui.estimate ? reviewCard(ctx) : photoCard(ctx),
     foodCard(ctx),

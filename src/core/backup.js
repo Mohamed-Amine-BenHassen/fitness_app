@@ -7,6 +7,7 @@ import { isPlausibleWeight } from './bodyweight.js';
 import { isPlausibleCalories, normalizeGoal, normalizeProfile } from './energy.js';
 import { normalizeEntry } from './nutrition.js';
 import { normalizeCheckIn, normalizeSplit } from './targets.js';
+import { MAX_DAY_ML, normalizeWaterGoal } from './water.js';
 import {
   SCHEMA_VERSION,
   defaultSettings,
@@ -34,7 +35,8 @@ export function buildBackup(state, exportedAt) {
     nutrition: state.nutrition,
     bodyweight: state.bodyweight,
     calories: state.calories,
-    checkIns: state.checkIns
+    checkIns: state.checkIns,
+    water: state.water
   };
 }
 
@@ -83,6 +85,9 @@ export function validateBackup(data) {
   if (data.checkIns !== undefined && !Array.isArray(data.checkIns)) {
     errors.push('"checkIns" must be an array.');
   }
+  if (data.water !== undefined && !isPlainObject(data.water)) {
+    errors.push('"water" must be an object keyed by date.');
+  }
   return { ok: errors.length === 0, errors };
 }
 
@@ -116,7 +121,8 @@ function normalizeSettings(raw) {
     weightStepKg: step >= 0.25 && step <= 50 ? step : fallback.weightStepKg,
     profile: normalizeProfile(raw.profile),
     goal: normalizeGoal(raw.goal),
-    calorieSplit: normalizeSplit(raw.calorieSplit)
+    calorieSplit: normalizeSplit(raw.calorieSplit),
+    waterGoalMl: normalizeWaterGoal(raw.waterGoalMl)
   };
 }
 
@@ -265,6 +271,7 @@ function normalizeCalories(raw) {
 // v5 → v6: food-log entries and custom foods may carry kcal, fat and carbs.
 // Older ones keep protein only, and simply count no calories. Adds empty
 // `checkIns` and an even `settings.calorieSplit`.
+// v6 → v7: adds an empty `water` and no `settings.waterGoalMl` (goal from weight).
 export function migrate(data) {
   if (!isPlainObject(data)) return defaultState();
   const library = normalizeLibrary(data.library);
@@ -281,8 +288,18 @@ export function migrate(data) {
     nutrition: normalizeNutrition(data.nutrition),
     bodyweight: normalizeBodyweight(data.bodyweight),
     calories: normalizeCalories(data.calories),
-    checkIns: normalizeCheckIns(data.checkIns)
+    checkIns: normalizeCheckIns(data.checkIns),
+    water: normalizeWater(data.water)
   };
+}
+
+function normalizeWater(raw) {
+  if (!isPlainObject(raw)) return {};
+  const out = {};
+  for (const [dateKey, ml] of Object.entries(raw)) {
+    if (isDateKey(dateKey) && Number.isFinite(ml) && ml > 0 && ml <= MAX_DAY_ML) out[dateKey] = Math.round(ml);
+  }
+  return out;
 }
 
 // Oldest first, one per day (the later wins).
@@ -331,7 +348,8 @@ function firstLoggedDay(state) {
     ...state.sessions.map((s) => s.dateKey),
     ...Object.keys(state.nutrition),
     ...Object.keys(state.bodyweight),
-    ...Object.keys(state.calories)
+    ...Object.keys(state.calories),
+    ...Object.keys(state.water)
   ].sort();
   return keys.length ? keys[0] : null;
 }
